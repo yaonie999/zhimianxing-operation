@@ -1,0 +1,1507 @@
+{
+  "orders": [
+    {
+      "id": 1,
+      "orderNo": "ZM2026030001",
+      "patient": "张三",
+      "phone": "15100001701",
+      "product": "睡眠方案服务",
+      "orderAmount": 30,
+      "paidAmount": 30,
+      "platformShare": 3,
+      "tenantShare": 27,
+      "createdAt": "2026-03-01 15:30:00",
+      "status": "paid",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "29天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-01 16:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-01 17:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "orderNo": "ZM2026030002",
+      "patient": "李四",
+      "phone": "15100001702",
+      "product": "CBT训练",
+      "orderAmount": 45,
+      "paidAmount": 45,
+      "platformShare": 4.5,
+      "tenantShare": 40.5,
+      "createdAt": "2026-03-01 22:30:00",
+      "status": "completed",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "28天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-01 23:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-02 00:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "orderNo": "ZM2026030003",
+      "patient": "王五",
+      "phone": "15100001703",
+      "product": "智能设备租赁",
+      "orderAmount": 199,
+      "paidAmount": 199,
+      "platformShare": 19.9,
+      "tenantShare": 179.1,
+      "createdAt": "2026-03-02 05:30:00",
+      "status": "cancelled",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已取消",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "6次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "6次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "27天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-02 06:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-02 07:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "orderNo": "ZM2026030004",
+      "patient": "赵六",
+      "phone": "15100001704",
+      "product": "线下训练营",
+      "orderAmount": 560,
+      "paidAmount": 560,
+      "platformShare": 56,
+      "tenantShare": 504,
+      "createdAt": "2026-03-02 12:30:00",
+      "status": "refunded",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "5次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "5次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "26天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-02 13:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-02 14:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "orderNo": "ZM2026030005",
+      "patient": "钱七",
+      "phone": "15100001705",
+      "product": "量表评估+报告解读",
+      "orderAmount": 299,
+      "paidAmount": 299,
+      "platformShare": 29.9,
+      "tenantShare": 269.1,
+      "createdAt": "2026-03-02 19:30:00",
+      "status": "pending",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "待支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "4次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "4次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "25天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-02 20:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-02 21:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "orderNo": "ZM2026030006",
+      "patient": "孙八",
+      "phone": "15100001706",
+      "product": "睡眠方案服务",
+      "orderAmount": 99,
+      "paidAmount": 99,
+      "platformShare": 9.9,
+      "tenantShare": 89.1,
+      "createdAt": "2026-03-03 02:30:00",
+      "status": "paid",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "3次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "9次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "24天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-03 03:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-03 04:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "orderNo": "ZM2026030007",
+      "patient": "周九",
+      "phone": "15100001707",
+      "product": "CBT训练",
+      "orderAmount": 28,
+      "paidAmount": 28,
+      "platformShare": 2.8,
+      "tenantShare": 25.2,
+      "createdAt": "2026-03-03 09:30:00",
+      "status": "completed",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "2次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "23天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-03 10:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-03 11:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "orderNo": "ZM2026030008",
+      "patient": "吴十",
+      "phone": "15100001708",
+      "product": "智能设备租赁",
+      "orderAmount": 30,
+      "paidAmount": 30,
+      "platformShare": 3,
+      "tenantShare": 27,
+      "createdAt": "2026-03-03 16:30:00",
+      "status": "cancelled",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已取消",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "9次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "22天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-03 17:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-03 18:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "orderNo": "ZM2026030009",
+      "patient": "郑十一",
+      "phone": "15100001709",
+      "product": "线下训练营",
+      "orderAmount": 45,
+      "paidAmount": 45,
+      "platformShare": 4.5,
+      "tenantShare": 40.5,
+      "createdAt": "2026-03-03 23:30:00",
+      "status": "refunded",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "6次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "21天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-04 00:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-04 01:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "orderNo": "ZM2026030010",
+      "patient": "王十二",
+      "phone": "15100001710",
+      "product": "量表评估+报告解读",
+      "orderAmount": 199,
+      "paidAmount": 199,
+      "platformShare": 19.9,
+      "tenantShare": 179.1,
+      "createdAt": "2026-03-04 06:30:00",
+      "status": "pending",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "待支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "5次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "20天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-04 07:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-04 08:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "orderNo": "ZM2026030011",
+      "patient": "张三",
+      "phone": "15100001711",
+      "product": "睡眠方案服务",
+      "orderAmount": 560,
+      "paidAmount": 560,
+      "platformShare": 56,
+      "tenantShare": 504,
+      "createdAt": "2026-03-04 13:30:00",
+      "status": "paid",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "6次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "4次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "19天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-04 14:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-04 15:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "orderNo": "ZM2026030012",
+      "patient": "李四",
+      "phone": "15100001712",
+      "product": "CBT训练",
+      "orderAmount": 299,
+      "paidAmount": 299,
+      "platformShare": 29.9,
+      "tenantShare": 269.1,
+      "createdAt": "2026-03-04 20:30:00",
+      "status": "completed",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "5次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "9次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "18天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-04 21:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-04 22:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "orderNo": "ZM2026030013",
+      "patient": "王五",
+      "phone": "15100001713",
+      "product": "智能设备租赁",
+      "orderAmount": 99,
+      "paidAmount": 99,
+      "platformShare": 9.9,
+      "tenantShare": 89.1,
+      "createdAt": "2026-03-05 03:30:00",
+      "status": "cancelled",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已取消",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "4次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "17天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-05 04:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-05 05:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "orderNo": "ZM2026030014",
+      "patient": "赵六",
+      "phone": "15100001714",
+      "product": "线下训练营",
+      "orderAmount": 28,
+      "paidAmount": 28,
+      "platformShare": 2.8,
+      "tenantShare": 25.2,
+      "createdAt": "2026-03-05 10:30:00",
+      "status": "refunded",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "3次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "16天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-05 11:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-05 12:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "orderNo": "ZM2026030015",
+      "patient": "钱七",
+      "phone": "15100001715",
+      "product": "量表评估+报告解读",
+      "orderAmount": 30,
+      "paidAmount": 30,
+      "platformShare": 3,
+      "tenantShare": 27,
+      "createdAt": "2026-03-05 17:30:00",
+      "status": "pending",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "待支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "2次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "6次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "15天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-05 18:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-05 19:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "orderNo": "ZM2026030016",
+      "patient": "孙八",
+      "phone": "15100001716",
+      "product": "睡眠方案服务",
+      "orderAmount": 45,
+      "paidAmount": 45,
+      "platformShare": 4.5,
+      "tenantShare": 40.5,
+      "createdAt": "2026-03-06 00:30:00",
+      "status": "paid",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "9次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "5次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "14天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-06 01:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-06 02:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "orderNo": "ZM2026030017",
+      "patient": "周九",
+      "phone": "15100001717",
+      "product": "CBT训练",
+      "orderAmount": 199,
+      "paidAmount": 199,
+      "platformShare": 19.9,
+      "tenantShare": 179.1,
+      "createdAt": "2026-03-06 07:30:00",
+      "status": "completed",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "4次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "13天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-06 08:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-06 09:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "orderNo": "ZM2026030018",
+      "patient": "吴十",
+      "phone": "15100001718",
+      "product": "智能设备租赁",
+      "orderAmount": 560,
+      "paidAmount": 560,
+      "platformShare": 56,
+      "tenantShare": 504,
+      "createdAt": "2026-03-06 14:30:00",
+      "status": "cancelled",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已取消",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "9次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "12天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-06 15:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-06 16:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "orderNo": "ZM2026030019",
+      "patient": "郑十一",
+      "phone": "15100001719",
+      "product": "线下训练营",
+      "orderAmount": 299,
+      "paidAmount": 299,
+      "platformShare": 29.9,
+      "tenantShare": 269.1,
+      "createdAt": "2026-03-06 21:30:00",
+      "status": "refunded",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "已支付",
+      "refundStatus": "已退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "6次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "8次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "11天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-06 22:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-06 23:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "orderNo": "ZM2026030020",
+      "patient": "王十二",
+      "phone": "15100001720",
+      "product": "量表评估+报告解读",
+      "orderAmount": 99,
+      "paidAmount": 99,
+      "platformShare": 9.9,
+      "tenantShare": 89.1,
+      "createdAt": "2026-03-07 04:30:00",
+      "status": "pending",
+      "paymentMethod": "微信支付",
+      "paymentStatus": "待支付",
+      "refundStatus": "未退款",
+      "serviceItems": [
+        {
+          "id": 1,
+          "name": "量表评估+报告解读",
+          "total": "9次",
+          "remain": "5次"
+        },
+        {
+          "id": 2,
+          "name": "CBT训练",
+          "total": "9次",
+          "remain": "7次"
+        },
+        {
+          "id": 3,
+          "name": "睡眠日记",
+          "total": "30天",
+          "remain": "10天"
+        }
+      ],
+      "usedItems": [
+        {
+          "id": 1,
+          "time": "2026-03-07 05:30:00",
+          "item": "量表评估+报告解读"
+        },
+        {
+          "id": 2,
+          "time": "2026-03-07 06:30:00",
+          "item": "CBT训练"
+        }
+      ]
+    }
+  ],
+  "refunds": [
+    {
+      "id": 1,
+      "orderId": 2,
+      "refundNo": "RF-2026030001",
+      "orderNo": "ZM2026030002",
+      "user": "李四151****1702",
+      "orderAmount": 45,
+      "refundAmount": 45,
+      "refundType": "全额退款",
+      "applicant": "王XX",
+      "applyTime": "2026-03-03 09:20:00",
+      "status": "pending",
+      "rejectReason": ""
+    },
+    {
+      "id": 2,
+      "orderId": 5,
+      "refundNo": "RF-2026030002",
+      "orderNo": "ZM2026030005",
+      "user": "钱七151****1705",
+      "orderAmount": 560,
+      "refundAmount": 560,
+      "refundType": "部分退款",
+      "applicant": "王XX",
+      "applyTime": "2026-03-05 15:00:00",
+      "status": "approved",
+      "rejectReason": ""
+    },
+    {
+      "id": 3,
+      "orderId": 8,
+      "refundNo": "RF-2026030003",
+      "orderNo": "ZM2026030008",
+      "user": "吴十151****1708",
+      "orderAmount": 199,
+      "refundAmount": 199,
+      "refundType": "全额退款",
+      "applicant": "王XX",
+      "applyTime": "2026-03-08 10:40:00",
+      "status": "refunded",
+      "rejectReason": ""
+    },
+    {
+      "id": 4,
+      "orderId": 10,
+      "refundNo": "RF-2026030004",
+      "orderNo": "ZM2026030010",
+      "user": "王十二151****1710",
+      "orderAmount": 299,
+      "refundAmount": 100,
+      "refundType": "部分退款",
+      "applicant": "王XX",
+      "applyTime": "2026-03-09 16:30:00",
+      "status": "rejected",
+      "rejectReason": "超出退款时限"
+    }
+  ],
+  "verifyRecords": [
+    {
+      "id": 1,
+      "orderId": 1,
+      "orderNo": "ZM2026030001",
+      "user": "张三",
+      "phone": "15100001701",
+      "product": "睡眠方案服务",
+      "verifyTime": "2026-03-01 16:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 2,
+      "orderId": 2,
+      "orderNo": "ZM2026030002",
+      "user": "李四",
+      "phone": "15100001702",
+      "product": "CBT训练",
+      "verifyTime": "2026-03-01 23:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 3,
+      "orderId": 3,
+      "orderNo": "ZM2026030003",
+      "user": "王五",
+      "phone": "15100001703",
+      "product": "智能设备租赁",
+      "verifyTime": "2026-03-02 06:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 4,
+      "orderId": 4,
+      "orderNo": "ZM2026030004",
+      "user": "赵六",
+      "phone": "15100001704",
+      "product": "线下训练营",
+      "verifyTime": "2026-03-02 13:30:00",
+      "verifyStatus": "pending",
+      "verifier": "-"
+    },
+    {
+      "id": 5,
+      "orderId": 5,
+      "orderNo": "ZM2026030005",
+      "user": "钱七",
+      "phone": "15100001705",
+      "product": "量表评估+报告解读",
+      "verifyTime": "2026-03-02 20:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 6,
+      "orderId": 6,
+      "orderNo": "ZM2026030006",
+      "user": "孙八",
+      "phone": "15100001706",
+      "product": "睡眠方案服务",
+      "verifyTime": "2026-03-03 03:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 7,
+      "orderId": 7,
+      "orderNo": "ZM2026030007",
+      "user": "周九",
+      "phone": "15100001707",
+      "product": "CBT训练",
+      "verifyTime": "2026-03-03 10:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 8,
+      "orderId": 8,
+      "orderNo": "ZM2026030008",
+      "user": "吴十",
+      "phone": "15100001708",
+      "product": "智能设备租赁",
+      "verifyTime": "2026-03-03 17:30:00",
+      "verifyStatus": "pending",
+      "verifier": "-"
+    },
+    {
+      "id": 9,
+      "orderId": 9,
+      "orderNo": "ZM2026030009",
+      "user": "郑十一",
+      "phone": "15100001709",
+      "product": "线下训练营",
+      "verifyTime": "2026-03-04 00:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 10,
+      "orderId": 10,
+      "orderNo": "ZM2026030010",
+      "user": "王十二",
+      "phone": "15100001710",
+      "product": "量表评估+报告解读",
+      "verifyTime": "2026-03-04 07:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 11,
+      "orderId": 11,
+      "orderNo": "ZM2026030011",
+      "user": "张三",
+      "phone": "15100001711",
+      "product": "睡眠方案服务",
+      "verifyTime": "2026-03-04 14:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 12,
+      "orderId": 12,
+      "orderNo": "ZM2026030012",
+      "user": "李四",
+      "phone": "15100001712",
+      "product": "CBT训练",
+      "verifyTime": "2026-03-04 21:30:00",
+      "verifyStatus": "pending",
+      "verifier": "-"
+    },
+    {
+      "id": 13,
+      "orderId": 13,
+      "orderNo": "ZM2026030013",
+      "user": "王五",
+      "phone": "15100001713",
+      "product": "智能设备租赁",
+      "verifyTime": "2026-03-05 04:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 14,
+      "orderId": 14,
+      "orderNo": "ZM2026030014",
+      "user": "赵六",
+      "phone": "15100001714",
+      "product": "线下训练营",
+      "verifyTime": "2026-03-05 11:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 15,
+      "orderId": 15,
+      "orderNo": "ZM2026030015",
+      "user": "钱七",
+      "phone": "15100001715",
+      "product": "量表评估+报告解读",
+      "verifyTime": "2026-03-05 18:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 16,
+      "orderId": 16,
+      "orderNo": "ZM2026030016",
+      "user": "孙八",
+      "phone": "15100001716",
+      "product": "睡眠方案服务",
+      "verifyTime": "2026-03-06 01:30:00",
+      "verifyStatus": "pending",
+      "verifier": "-"
+    },
+    {
+      "id": 17,
+      "orderId": 17,
+      "orderNo": "ZM2026030017",
+      "user": "周九",
+      "phone": "15100001717",
+      "product": "CBT训练",
+      "verifyTime": "2026-03-06 08:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 18,
+      "orderId": 18,
+      "orderNo": "ZM2026030018",
+      "user": "吴十",
+      "phone": "15100001718",
+      "product": "智能设备租赁",
+      "verifyTime": "2026-03-06 15:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 19,
+      "orderId": 19,
+      "orderNo": "ZM2026030019",
+      "user": "郑十一",
+      "phone": "15100001719",
+      "product": "线下训练营",
+      "verifyTime": "2026-03-06 22:30:00",
+      "verifyStatus": "verified",
+      "verifier": "前台小李"
+    },
+    {
+      "id": 20,
+      "orderId": 20,
+      "orderNo": "ZM2026030020",
+      "user": "王十二",
+      "phone": "15100001720",
+      "product": "量表评估+报告解读",
+      "verifyTime": "2026-03-07 05:30:00",
+      "verifyStatus": "pending",
+      "verifier": "-"
+    }
+  ],
+  "profileStore": {},
+  "patients": [
+    {
+      "id": "1000001",
+      "name": "张三",
+      "phone": "151****1701",
+      "gender": "女",
+      "age": 23,
+      "occupation": "程序员",
+      "marital": "未婚",
+      "studio": "望京工作室",
+      "therapist": "李医生",
+      "group": "B组",
+      "createTime": "2026-03-01 21:00:00"
+    },
+    {
+      "id": "1000002",
+      "name": "李四",
+      "phone": "151****1702",
+      "gender": "男",
+      "age": 24,
+      "occupation": "医生",
+      "marital": "已婚",
+      "studio": "国贸工作室",
+      "therapist": "王医生",
+      "group": "C组",
+      "createTime": "2026-03-02 09:00:00"
+    },
+    {
+      "id": "1000003",
+      "name": "王五",
+      "phone": "151****1703",
+      "gender": "女",
+      "age": 25,
+      "occupation": "运营",
+      "marital": "未婚",
+      "studio": "万象城XXX工作室",
+      "therapist": "赵老师",
+      "group": "A组",
+      "createTime": "2026-03-02 21:00:00"
+    },
+    {
+      "id": "1000004",
+      "name": "赵六",
+      "phone": "151****1704",
+      "gender": "男",
+      "age": 26,
+      "occupation": "护士",
+      "marital": "已婚",
+      "studio": "望京工作室",
+      "therapist": "张新龙",
+      "group": "B组",
+      "createTime": "2026-03-03 09:00:00"
+    },
+    {
+      "id": "1000005",
+      "name": "钱七",
+      "phone": "151****1705",
+      "gender": "女",
+      "age": 27,
+      "occupation": "设计师",
+      "marital": "未婚",
+      "studio": "国贸工作室",
+      "therapist": "李医生",
+      "group": "C组",
+      "createTime": "2026-03-03 21:00:00"
+    },
+    {
+      "id": "1000006",
+      "name": "孙八",
+      "phone": "151****1706",
+      "gender": "男",
+      "age": 28,
+      "occupation": "律师",
+      "marital": "已婚",
+      "studio": "万象城XXX工作室",
+      "therapist": "王医生",
+      "group": "A组",
+      "createTime": "2026-03-04 09:00:00"
+    },
+    {
+      "id": "1000007",
+      "name": "周九",
+      "phone": "151****1707",
+      "gender": "女",
+      "age": 29,
+      "occupation": "销售",
+      "marital": "未婚",
+      "studio": "望京工作室",
+      "therapist": "赵老师",
+      "group": "B组",
+      "createTime": "2026-03-04 21:00:00"
+    },
+    {
+      "id": "1000008",
+      "name": "吴十",
+      "phone": "151****1708",
+      "gender": "男",
+      "age": 30,
+      "occupation": "教师",
+      "marital": "已婚",
+      "studio": "国贸工作室",
+      "therapist": "张新龙",
+      "group": "C组",
+      "createTime": "2026-03-05 09:00:00"
+    },
+    {
+      "id": "1000009",
+      "name": "郑十一",
+      "phone": "151****1709",
+      "gender": "女",
+      "age": 31,
+      "occupation": "程序员",
+      "marital": "未婚",
+      "studio": "万象城XXX工作室",
+      "therapist": "李医生",
+      "group": "A组",
+      "createTime": "2026-03-05 21:00:00"
+    },
+    {
+      "id": "1000010",
+      "name": "王十二",
+      "phone": "151****1710",
+      "gender": "男",
+      "age": 32,
+      "occupation": "医生",
+      "marital": "已婚",
+      "studio": "望京工作室",
+      "therapist": "王医生",
+      "group": "B组",
+      "createTime": "2026-03-06 09:00:00"
+    },
+    {
+      "id": "1000011",
+      "name": "张三",
+      "phone": "151****1711",
+      "gender": "女",
+      "age": 33,
+      "occupation": "运营",
+      "marital": "未婚",
+      "studio": "国贸工作室",
+      "therapist": "赵老师",
+      "group": "C组",
+      "createTime": "2026-03-06 21:00:00"
+    },
+    {
+      "id": "1000012",
+      "name": "李四",
+      "phone": "151****1712",
+      "gender": "男",
+      "age": 34,
+      "occupation": "护士",
+      "marital": "已婚",
+      "studio": "万象城XXX工作室",
+      "therapist": "张新龙",
+      "group": "A组",
+      "createTime": "2026-03-07 09:00:00"
+    },
+    {
+      "id": "1000013",
+      "name": "王五",
+      "phone": "151****1713",
+      "gender": "女",
+      "age": 35,
+      "occupation": "设计师",
+      "marital": "未婚",
+      "studio": "望京工作室",
+      "therapist": "李医生",
+      "group": "B组",
+      "createTime": "2026-03-07 21:00:00"
+    },
+    {
+      "id": "1000014",
+      "name": "赵六",
+      "phone": "151****1714",
+      "gender": "男",
+      "age": 36,
+      "occupation": "律师",
+      "marital": "已婚",
+      "studio": "国贸工作室",
+      "therapist": "王医生",
+      "group": "C组",
+      "createTime": "2026-03-08 09:00:00"
+    },
+    {
+      "id": "1000015",
+      "name": "钱七",
+      "phone": "151****1715",
+      "gender": "女",
+      "age": 37,
+      "occupation": "销售",
+      "marital": "未婚",
+      "studio": "万象城XXX工作室",
+      "therapist": "赵老师",
+      "group": "A组",
+      "createTime": "2026-03-08 21:00:00"
+    },
+    {
+      "id": "1000016",
+      "name": "孙八",
+      "phone": "151****1716",
+      "gender": "男",
+      "age": 38,
+      "occupation": "教师",
+      "marital": "已婚",
+      "studio": "望京工作室",
+      "therapist": "张新龙",
+      "group": "B组",
+      "createTime": "2026-03-09 09:00:00"
+    },
+    {
+      "id": "1000017",
+      "name": "周九",
+      "phone": "151****1717",
+      "gender": "女",
+      "age": 39,
+      "occupation": "程序员",
+      "marital": "未婚",
+      "studio": "国贸工作室",
+      "therapist": "李医生",
+      "group": "C组",
+      "createTime": "2026-03-09 21:00:00"
+    },
+    {
+      "id": "1000018",
+      "name": "吴十",
+      "phone": "151****1718",
+      "gender": "男",
+      "age": 40,
+      "occupation": "医生",
+      "marital": "已婚",
+      "studio": "万象城XXX工作室",
+      "therapist": "王医生",
+      "group": "A组",
+      "createTime": "2026-03-10 09:00:00"
+    },
+    {
+      "id": "1000019",
+      "name": "郑十一",
+      "phone": "151****1719",
+      "gender": "女",
+      "age": 41,
+      "occupation": "运营",
+      "marital": "未婚",
+      "studio": "望京工作室",
+      "therapist": "赵老师",
+      "group": "B组",
+      "createTime": "2026-03-10 21:00:00"
+    },
+    {
+      "id": "1000020",
+      "name": "王十二",
+      "phone": "151****1720",
+      "gender": "男",
+      "age": 42,
+      "occupation": "护士",
+      "marital": "已婚",
+      "studio": "国贸工作室",
+      "therapist": "张新龙",
+      "group": "C组",
+      "createTime": "2026-03-11 09:00:00"
+    }
+  ]
+}
