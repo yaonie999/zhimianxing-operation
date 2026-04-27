@@ -268,7 +268,7 @@ export default function MemberDetailPage() {
           {LEFT_MENU_SECTIONS.map(function(section, sIdx) {
             return (
               <div key={sIdx}>
-                <div style={{padding:'6px 16px 4px',fontSize:11,color:'#94a3b8',fontWeight:600}}>{section.title}</div>
+                <div style={{padding:'8px 16px 4px',fontSize:12,color:'#64748b',fontWeight:700}}>{section.title}</div>
                 {section.items.map(function(item) {
                   return (
                     <div key={item.key} onClick={function() { setLeftTab(leftTab === item.key ? '' : item.key) }}

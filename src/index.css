@@ -7052,7 +7052,7 @@ body {
 .btn-secondary:hover { background: #f8fafc; }
 
 /* ==================== ֪ͨ���鵯�� ==================== */
-.notification-modal { width: 980px; max-width: calc(100vw - 32px); }
+.notification-modal { width: 90vw; max-width: 1400px; }
 .notification-table { width: 100%; border-collapse: collapse; }
 .notification-table th {
   text-align: left;

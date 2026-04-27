@@ -229,7 +229,12 @@ app.post('/api/orders/:id/request-refund', (req, res) => {
 // 退款 - 直连MySQL
 app.get('/api/refunds', (req, res) => {
   const page = parseInt(req.query.page||1), pageSize = parseInt(req.query.pageSize||10), offset = (page-1)*pageSize
-  dbPool.query('SELECT * FROM refund ORDER BY id DESC LIMIT ? OFFSET ?', [pageSize, offset], (err, rows) => {
+  dbPool.query(
+    `SELECT id, order_id as orderId, refund_no as refundNo, order_no as orderNo, user, order_amount as orderAmount,
+     refund_amount as refundAmount, refund_type as refundType, applicant, apply_time as applyTime, status,
+     reject_reason as rejectReason, approver, approve_time as approveTime, del_flag as delFlag
+     FROM refund ORDER BY id DESC LIMIT ? OFFSET ?`,
+    [pageSize, offset], (err, rows) => {
     if (err) return res.status(500).json({ code: 500, msg: err.message })
     dbPool.query('SELECT COUNT(*) as total FROM refund', (err2, tot) => {
       if (err2) return res.status(500).json({ code: 500, msg: err2.message })
@@ -304,15 +309,21 @@ app.delete('/api/verify-records/:id', (req, res) => forwardToBackend(req, res, '
 app.get('/api/notices', (req, res) => {
   dbPool.query('SELECT id, title, content, notice_type, publish_time FROM operation_notice WHERE status=1 ORDER BY publish_time DESC LIMIT 50', (err, rows) => {
     if (err) return res.json({ code: 500, msg: '查询失败' })
-    const notices = rows.map(r => ({
-      id: r.id,
-      title: r.title,
-      content: r.content ? r.content.replace(/<[^>]+>/g, '') : '',
-      type: r.notice_type,
-      time: r.publish_time ? String(r.publish_time).replace('T', ' ').substring(0, 19) : '',
-      sentAt: r.publish_time ? String(r.publish_time).replace('T', ' ').substring(0, 19) : '',
-      unread: true
-    }))
+    const notices = rows.map(r => {
+      const d = r.publish_time ? new Date(r.publish_time) : null
+      const fmt = d && !isNaN(d.getTime())
+        ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+        : ''
+      return {
+        id: r.id,
+        title: r.title,
+        content: r.content ? r.content.replace(/<[^>]+>/g, '') : '',
+        type: r.notice_type,
+        time: fmt,
+        sentAt: fmt,
+        unread: true
+      }
+    })
     res.json({ code: 200, data: notices })
   })
 })
@@ -465,8 +476,19 @@ app.get('/api/plan-templates/:id', (req, res) => {
   })
 })
 
-app.get('/api/plans/members/:memberId', (req, res) => {
-  dbPool.query('SELECT id, member_id, therapist, plan_name, plan_type, template_id, duration_days, goal, status, start_date, end_date, push_status, create_time FROM sleep_plan WHERE member_id=? AND del_flag=0 ORDER BY create_time DESC', [req.params.memberId], (e, rows) => {
+app.get('/api/plans/members', (req, res) => {
+  const keyword = req.query.keyword || ''
+  if (!keyword) return res.json({ code: 200, data: [] })
+  const isNumeric = /^\d+$/.test(keyword)
+  let query, params
+  if (isNumeric) {
+    query = 'SELECT sp.id, sp.member_id, sp.therapist, sp.plan_name, sp.plan_type, sp.template_id, sp.duration_days, sp.goal, sp.status, sp.start_date, sp.end_date, sp.push_status, sp.create_time, p.name as member_name FROM sleep_plan sp LEFT JOIN patient p ON sp.member_id=p.id WHERE sp.member_id=? AND sp.del_flag=0 ORDER BY sp.create_time DESC'
+    params = [keyword]
+  } else {
+    query = 'SELECT sp.id, sp.member_id, sp.therapist, sp.plan_name, sp.plan_type, sp.template_id, sp.duration_days, sp.goal, sp.status, sp.start_date, sp.end_date, sp.push_status, sp.create_time, p.name as member_name FROM sleep_plan sp LEFT JOIN patient p ON sp.member_id=p.id WHERE p.name LIKE ? AND sp.del_flag=0 ORDER BY sp.create_time DESC'
+    params = [`%${keyword}%`]
+  }
+  dbPool.query(query, params, (e, rows) => {
     if (e) return res.json({ code: 500, message: e.message })
     res.json({ code: 200, data: rows })
   })
@@ -605,8 +627,19 @@ app.get('/api/equipment/commands/:id', (req, res) => {
 })
 
 // 报告 - 直连MySQL
-app.get('/api/reports/members/:memberId', (req, res) => {
-  dbPool.query('SELECT id, member_id, member_name, report_type, plan_id, report_period_start, report_period_end, report_date, improvement_score, compliance_rate, therapist, create_time FROM treatment_report WHERE member_id=? AND del_flag=0 ORDER BY create_time DESC', [req.params.memberId], (e, rows) => {
+app.get('/api/reports/members', (req, res) => {
+  const keyword = req.query.keyword || ''
+  if (!keyword) return res.json({ code: 200, data: [] })
+  const isNumeric = /^\d+$/.test(keyword)
+  let query, params
+  if (isNumeric) {
+    query = 'SELECT id, member_id, member_name, report_type, plan_id, report_period_start, report_period_end, report_date, improvement_score, compliance_rate, therapist, create_time FROM treatment_report WHERE member_id=? AND del_flag=0 ORDER BY create_time DESC'
+    params = [keyword]
+  } else {
+    query = 'SELECT id, member_id, member_name, report_type, plan_id, report_period_start, report_period_end, report_date, improvement_score, compliance_rate, therapist, create_time FROM treatment_report WHERE member_name LIKE ? AND del_flag=0 ORDER BY create_time DESC'
+    params = [`%${keyword}%`]
+  }
+  dbPool.query(query, params, (e, rows) => {
     if (e) return res.json({ code: 500, message: e.message })
     res.json({ code: 200, data: rows })
   })
@@ -645,6 +678,96 @@ app.get('/api/reports/:id', (req, res) => {
     if (r.equipment_summary_json) r.equipment_summary_json = safeParse(r.equipment_summary_json)
     if (r.sleep_summary_json) r.sleep_summary_json = safeParse(r.sleep_summary_json)
     res.json({ code: 200, data: r })
+  })
+})
+
+// 工作室管理 - 直连MySQL
+app.get('/api/studios', (req, res) => {
+  dbPool.query('SELECT id, name, address, contact, phone, hours, remark, status, create_time FROM studio WHERE status=1 ORDER BY id', (e, rows) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, data: rows })
+  })
+})
+
+app.post('/api/studios', (req, res) => {
+  const { name, address, contact, phone, hours, remark } = req.body
+  if (!name) return res.json({ code: 400, message: '工作室名称不能为空' })
+  dbPool.query('INSERT INTO studio (name, address, contact, phone, hours, remark) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, address || '', contact || '', phone || '', hours || '', remark || ''], (e, result) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, data: { id: result.insertId, name, address, contact, phone, hours, remark } })
+  })
+})
+
+app.put('/api/studios/:id', (req, res) => {
+  const { name, address, contact, phone, hours, remark } = req.body
+  if (!name) return res.json({ code: 400, message: '工作室名称不能为空' })
+  dbPool.query('UPDATE studio SET name=?, address=?, contact=?, phone=?, hours=?, remark=? WHERE id=?',
+    [name, address || '', contact || '', phone || '', hours || '', remark || '', req.params.id], (e) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, message: '更新成功' })
+  })
+})
+
+app.delete('/api/studios/:id', (req, res) => {
+  dbPool.query('UPDATE studio SET status=0 WHERE id=?', [req.params.id], (e) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, message: '删除成功' })
+  })
+})
+
+// 睡眠师管理 - 直连MySQL
+app.get('/api/therapists', (req, res) => {
+  dbPool.query(`SELECT t.id, t.name, t.employee_no, t.title, t.education, t.specialty, t.hire_date,
+    t.phone, t.studio_id, t.status, t.create_time,
+    s.name as studio_name FROM therapist t LEFT JOIN studio s ON t.studio_id=s.id WHERE t.status=1 ORDER BY t.id`,
+    (e, rows) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    const ids = rows.map(r => r.id)
+    if (ids.length === 0) return res.json({ code: 200, data: rows.map(r => ({ ...r, patient_count: 0, plan_count: 0, execution_count: 0 })) })
+    const placeholders = ids.map(() => '?').join(',')
+    dbPool.query(`SELECT therapist_id, COUNT(DISTINCT member_id) as cnt FROM sleep_plan WHERE therapist_id IN (${placeholders}) GROUP BY therapist_id`, ids, (e2, planStats) => {
+      const planMap = {}
+      if (planStats) planStats.forEach(p => { planMap[p.therapist_id] = p.cnt })
+      dbPool.query(`SELECT therapist_id, COUNT(*) as cnt FROM sleep_plan_item WHERE completed=1 AND therapist_id IN (${placeholders}) GROUP BY therapist_id`, ids, (e3, execStats) => {
+        const execMap = {}
+        if (execStats) execStats.forEach(ex => { execMap[ex.therapist_id] = ex.cnt })
+        const result = rows.map(r => ({
+          ...r,
+          patient_count: planMap[r.id] || 0,
+          plan_count: planMap[r.id] || 0,
+          execution_count: execMap[r.id] || 0
+        }))
+        res.json({ code: 200, data: result })
+      })
+    })
+  })
+})
+
+app.post('/api/therapists', (req, res) => {
+  const { name, employee_no, title, education, specialty, hire_date, phone, studio_id } = req.body
+  if (!name) return res.json({ code: 400, message: '姓名不能为空' })
+  dbPool.query('INSERT INTO therapist (name, employee_no, title, education, specialty, hire_date, phone, studio_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, employee_no || '', title || '', education || '', specialty || '', hire_date || null, phone || '', studio_id || null], (e, result) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, data: { id: result.insertId, name, employee_no, title, education, specialty, hire_date, phone, studio_id } })
+  })
+})
+
+app.put('/api/therapists/:id', (req, res) => {
+  const { name, employee_no, title, education, specialty, hire_date, phone, studio_id } = req.body
+  if (!name) return res.json({ code: 400, message: '姓名不能为空' })
+  dbPool.query('UPDATE therapist SET name=?, employee_no=?, title=?, education=?, specialty=?, hire_date=?, phone=?, studio_id=? WHERE id=?',
+    [name, employee_no || '', title || '', education || '', specialty || '', hire_date || null, phone || '', studio_id || null, req.params.id], (e) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, message: '更新成功' })
+  })
+})
+
+app.delete('/api/therapists/:id', (req, res) => {
+  dbPool.query('UPDATE therapist SET status=0 WHERE id=?', [req.params.id], (e) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, message: '删除成功' })
   })
 })
 

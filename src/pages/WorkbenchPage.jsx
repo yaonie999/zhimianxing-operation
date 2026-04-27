@@ -57,6 +57,18 @@ const defaultNotices = []
 const defaultTodayTasks = []
 const defaultPatientMessages = []
 
+function formatTime(timeStr) {
+  if (!timeStr) return '-'
+  const d = new Date(timeStr)
+  if (isNaN(d.getTime())) return timeStr
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hour = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hour}:${min}`
+}
+
 export default function WorkbenchPage({ embedded = false }) {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState(null)
@@ -501,7 +513,7 @@ export default function WorkbenchPage({ embedded = false }) {
                   >
                     {n.unread && <span className="unread-dot">●</span>}
                     <span className="notice-title">{n.title}</span>
-                    <span className="notice-time">{n.time}</span>
+                    <span className="notice-time">{formatTime(n.time)}</span>
                   </div>
                 ))}
               </div>
@@ -574,7 +586,7 @@ export default function WorkbenchPage({ embedded = false }) {
       {/* 通知列表弹窗 */}
       {showNoticeModal && (
         <ModalOverlay onClose={() => setShowNoticeModal(false)}>
-          <div className="modal-container notification-modal">
+          <div className="notification-modal">
             <div className="modal-header">
               <div className="modal-title">通知消息</div>
               <div className="modal-close" onClick={() => setShowNoticeModal(false)}>×</div>
@@ -586,7 +598,7 @@ export default function WorkbenchPage({ embedded = false }) {
                     <th style={{ width: 100, textAlign: 'left' }}>类型</th>
                     <th style={{ textAlign: 'left' }}>标题</th>
                     <th style={{ width: 120, textAlign: 'left' }}>时间</th>
-                    <th style={{ width: 60, textAlign: 'center' }}>操作</th>
+                    <th style={{ width: 80, textAlign: 'center' }}>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -594,7 +606,7 @@ export default function WorkbenchPage({ embedded = false }) {
                     <tr key={n.id}>
                       <td>{n.type}</td>
                       <td>{n.unread ? <strong>{n.title}</strong> : n.title}</td>
-                      <td>{n.time}</td>
+                      <td>{formatTime(n.time)}</td>
                       <td style={{ textAlign: 'center' }}>
                         <button className="table-link-btn" onClick={() => openNoticeDetail(n)}>查看</button>
                       </td>
@@ -626,7 +638,7 @@ export default function WorkbenchPage({ embedded = false }) {
             <div className="modal-body">
               <div className="notice-detail-info">
                 <span className="notice-detail-label">发送时间：</span>
-                <span>{selectedNotice.sentAt || selectedNotice.time}</span>
+                <span>{formatTime(selectedNotice.sentAt) || formatTime(selectedNotice.time)}</span>
               </div>
               <div className="notice-detail-content">
                 <div className="notice-detail-label">通知内容：</div>

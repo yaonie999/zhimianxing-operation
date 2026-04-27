@@ -12,7 +12,7 @@ export default function TreatmentReportPage() {
     if (!memberId.trim()) { setError('请输入患者ID'); return; }
     setLoading(true);
     setError('');
-    fetch('/api/reports/members/' + memberId)
+    fetch('/api/reports/members?keyword=' + encodeURIComponent(memberId))
       .then(r => r.json())
       .then(p => { if (p.code === 200) setReports(p.data || []); else setError(p.message); })
       .catch(() => setError('网络错误'))
@@ -63,7 +63,7 @@ export default function TreatmentReportPage() {
       </div>
 
       <div className="search-bar">
-        <input className="input-field" placeholder="输入患者ID" value={memberId} onChange={e => setMemberId(e.target.value)} type="number" />
+        <input className="input-field" placeholder="输入患者ID 或姓名" value={memberId} onChange={e => setMemberId(e.target.value)} />
         <button className="search-btn" onClick={searchReports} disabled={loading}>{loading ? '查询中...' : '查询报告'}</button>
       </div>
 

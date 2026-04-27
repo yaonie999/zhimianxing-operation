@@ -13,7 +13,7 @@ export default function PlanExecutionPage() {
     if (!memberId.trim()) { setError('请输入患者ID'); return; }
     setLoading(true);
     setError('');
-    fetch('/api/plans/members/' + memberId)
+    fetch('/api/plans/members?keyword=' + encodeURIComponent(memberId))
       .then(r => r.json())
       .then(p => { if (p.code === 200) setPlans(p.data || []); else setError(p.message); })
       .catch(() => setError('网络错误'))
@@ -79,7 +79,7 @@ const statusCls = { 0: 'status-pending', 1: 'status-active', 2: 'status-done' };
       </div>
 
       <div className="search-bar">
-        <input className="input-field" placeholder="输入患者ID" value={memberId} onChange={e => setMemberId(e.target.value)} type="number" />
+        <input className="input-field" placeholder="输入患者ID 或姓名" value={memberId} onChange={e => setMemberId(e.target.value)} />
         <button className="search-btn" onClick={searchPlans} disabled={loading}>{loading ? '查询中...' : '查询方案'}</button>
       </div>
       {error && <div className="error-msg">{error}</div>}

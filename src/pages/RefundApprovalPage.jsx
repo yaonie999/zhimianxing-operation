@@ -200,7 +200,7 @@ export default function RefundApprovalPage() {
           <div className="filter-group-v2">
             <label>退款状态</label>
             <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="">请选择退款状态，可多选</option>
+              <option value="">请选择退款状态</option>
               {STATUS_TABS.filter((item) => item.key !== 'all').map((item) => (
                 <option key={item.key} value={item.key}>{item.label}</option>
               ))}

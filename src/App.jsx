@@ -4,7 +4,7 @@ import OperationLayout from './components/OperationLayout'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import DeviceManagePage from './pages/DeviceManagePage'
 import LoginPage from './pages/LoginPage'
-import MemberDetailPage from './pages/MemberDetailPage' // TEMPORARILY DISABLED
+import MemberDetailPage from './pages/MemberDetailPage'
 import MemberListPage from './pages/MemberListPage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import OrderListPage from './pages/OrderListPage'
@@ -17,6 +17,8 @@ import AssessmentPage from './pages/AssessmentPage'
 import PlanTemplateListPage from './pages/PlanTemplateListPage'
 import PlanExecutionPage from './pages/PlanExecutionPage'
 import TreatmentReportPage from './pages/TreatmentReportPage'
+import StudioMgmtPage from './pages/StudioMgmtPage'
+import TherapistMgmtPage from './pages/TherapistMgmtPage'
 
 function ProtectedRoute({ children }) {
   const [token, setToken] = useState(localStorage.getItem('operation_token'))
@@ -183,6 +185,8 @@ export default function App() {
 <Route path="/plan-templates" element={<ProtectedRoute><OperationLayout><PlanTemplateListPage /></OperationLayout></ProtectedRoute>} />
 <Route path="/plan-execution" element={<ProtectedRoute><OperationLayout><PlanExecutionPage /></OperationLayout></ProtectedRoute>} />
 <Route path="/treatment-report" element={<ProtectedRoute><OperationLayout><TreatmentReportPage /></OperationLayout></ProtectedRoute>} />
+<Route path="/studios" element={<ProtectedRoute><OperationLayout><StudioMgmtPage /></OperationLayout></ProtectedRoute>} />
+<Route path="/therapists" element={<ProtectedRoute><OperationLayout><TherapistMgmtPage /></OperationLayout></ProtectedRoute>} />
 
 <Route path="*" element={<Navigate to="/workbench" replace />} />
       </Routes>

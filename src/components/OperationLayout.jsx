@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 class ContentErrorBoundary extends React.Component {
   constructor(props) {
@@ -46,7 +46,9 @@ const MENU_ITEMS = [
   { label: '量表评估', path: '/assessment', icon: '📝' },
   { label: '方案模板', path: '/plan-templates', icon: '📋' },
   { label: '方案执行', path: '/plan-execution', icon: '▶️' },
-  { label: '治疗报告', path: '/treatment-report', icon: '📊' }
+  { label: '治疗报告', path: '/treatment-report', icon: '📊' },
+  { label: '工作室', path: '/studios', icon: '🏢' },
+  { label: '睡眠师', path: '/therapists', icon: '👨‍⚕️' }
 ]
 
 const STUDIOS = ['万象城XXX工作室', '望京工作室', '中关村工作室', '国贸工作室']
@@ -60,9 +62,28 @@ const cardLike = {
 
 export default function OperationLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
-  const [studio, setStudio] = useState(STUDIOS[0])
+  const [studioList, setStudioList] = useState([])
+  const [studio, setStudio] = useState('')
   const [showStudioDropdown, setShowStudioDropdown] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/studios')
+      .then(r => r.json())
+      .then(data => {
+        if (data.code === 200 && data.data.length > 0) {
+          setStudioList(data.data)
+          setStudio(data.data[0].name)
+        } else {
+          setStudioList(STUDIOS.map(name => ({ name })))
+          setStudio(STUDIOS[0])
+        }
+      })
+      .catch(() => {
+        setStudioList(STUDIOS.map(name => ({ name })))
+        setStudio(STUDIOS[0])
+      })
+  }, [])
 
   function navigate(path) {
     window.location.hash = path
@@ -305,22 +326,22 @@ export default function OperationLayout({ children }) {
                     overflow: 'hidden'
                   }}
                 >
-                  {STUDIOS.map((s) => (
+                  {studioList.map((s) => (
                     <div
-                      key={s}
+                      key={s.id || s.name}
                       onClick={() => {
-                        setStudio(s)
+                        setStudio(s.name)
                         setShowStudioDropdown(false)
                       }}
                       style={{
                         padding: '9px 12px',
                         fontSize: 13,
-                        color: s === studio ? 'var(--op-primary)' : 'var(--op-text)',
-                        background: s === studio ? 'var(--op-primary-soft)' : '#FFFFFF',
+                        color: s.name === studio ? 'var(--op-primary)' : 'var(--op-text)',
+                        background: s.name === studio ? 'var(--op-primary-soft)' : '#FFFFFF',
                         cursor: 'pointer'
                       }}
                     >
-                      {s}
+                      {s.name}
                     </div>
                   ))}
                 </div>
