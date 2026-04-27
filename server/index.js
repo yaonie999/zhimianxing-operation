@@ -771,5 +771,165 @@ app.delete('/api/therapists/:id', (req, res) => {
   })
 })
 
+// ========== 小程序 API (/gm/*) ==========
+
+// 微信登录
+app.post('/gm/wx/login-by-wechat', (req, res) => {
+  const { code } = req.body
+  if (!code) return res.json({ code: 400, message: '缺少code参数' })
+  dbPool.query('SELECT * FROM patient WHERE openid=? LIMIT 1', [code], (e, rows) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    let member, memberId, nickname
+    if (rows.length > 0) {
+      member = rows[0]
+      memberId = member.id
+      nickname = member.name
+    } else {
+      nickname = '新用户' + Date.now()
+    }
+    // 使用JWT存储memberId
+    const token = jwt.sign({ memberId, openId: code }, JWT_SECRET, { expiresIn: '30d' })
+    if (!member) {
+      dbPool.query('INSERT INTO patient (name, openid, create_time) VALUES (?, ?, NOW())', [nickname, code], (e2, result) => {
+        if (e2) return res.json({ code: 500, message: e2.message })
+        memberId = result.insertId
+        const finalToken = jwt.sign({ memberId, openId: code }, JWT_SECRET, { expiresIn: '30d' })
+        res.json({ code: 200, data: { token: finalToken, memberInfo: { id: memberId, nickname } } })
+      })
+    } else {
+      res.json({ code: 200, data: { token, memberInfo: { id: memberId, nickname, phone: member.phone } } })
+    }
+  })
+})
+
+// 获取会员信息
+app.get('/gm/members/me', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  if (!token) return res.json({ code: 401, message: '未登录' })
+  const decoded = verifyToken(token)
+  if (!decoded) return res.json({ code: 401, message: 'token无效' })
+  const memberId = decoded.memberId
+  if (!memberId) return res.json({ code: 401, message: 'token无效' })
+  dbPool.query('SELECT id, name, phone, gender, age, studio, therapist FROM patient WHERE id=?', [memberId], (e, rows) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    if (rows.length === 0) return res.json({ code: 404, message: '会员不存在' })
+    res.json({ code: 200, data: rows[0] })
+  })
+})
+
+// 获取当前方案
+app.get('/gm/plan/current', (req, res) => {
+  dbPool.query('SELECT id, plan_name as planName, plan_type as planType, status, start_date as startDate, end_date as endDate FROM sleep_plan WHERE member_id=1 AND del_flag=0 ORDER BY create_time DESC LIMIT 1', (e, rows) => {
+    if (e) return res.json({ code: 500, message: e.message })
+    res.json({ code: 200, data: rows[0] || null })
+  })
+})
+
+// 今日睡眠数据
+app.get('/gm/sleep/today', (req, res) => {
+  res.json({ code: 200, data: { sleepTime: '22:30', wakeTime: '06:30', duration: 8, score: 85 } })
+})
+
+// 今日任务
+app.get('/gm/sleep/tasks/today', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 1, time: '07:30', title: '起床', done: false },
+    { id: 2, time: '', title: '午休控制在20分钟，醒后如果仍困倦可以冥想20分钟', done: false },
+    { id: 3, time: '', title: '睡前放松训练', done: false },
+    { id: 4, time: '', title: '不要在床上做与睡眠无关的事情', done: false },
+    { id: 5, time: '', title: '一周七天固定时间上下床', done: false },
+    { id: 6, time: '00:00', title: '上床', done: true }
+  ] })
+})
+
+// 放松训练音频列表
+app.get('/gm/sleep/relax-audios', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 1, title: '呼吸训练' },
+    { id: 2, title: '肌肉放松' },
+    { id: 3, title: '冥想引导' },
+    { id: 4, title: '入睡困难时做的呼吸训练' },
+    { id: 5, title: '渐进式肌肉方式音频' },
+    { id: 6, title: '午休疲乏时做的冥想音频' }
+  ] })
+})
+
+// 未读消息数
+app.get('/gm/messages/unread-count', (req, res) => {
+  res.json({ code: 200, data: { count: 3 } })
+})
+
+// 睡眠师消息列表
+app.get('/gm/messages/coach', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 1, coachName: '李医生 · 睡眠管理师', coachAvatar: '/assets/images/default-avatar.png', lastMessage: '您的睡眠质量有所提升，深睡比例达到28%，比上周增加了5%，继续保持哦！', time: '今天 09:30', unread: 1 },
+    { id: 2, coachName: '李医生 · 睡眠管理师', coachAvatar: '/assets/images/default-avatar.png', lastMessage: '已为您生成新的定制睡眠计划，今晚可以尝试新的睡前冥想音频。', time: '昨天 16:45', unread: 1 },
+    { id: 3, coachName: '李医生 · 睡眠管理师', coachAvatar: '/assets/images/default-avatar.png', lastMessage: '根据本周的睡眠数据，建议调整晚餐时间，避免在睡前3小时内进食。', time: '前天 14:20', unread: 0 }
+  ] })
+})
+
+// 统计数据
+app.get('/gm/stats', (req, res) => {
+  res.json({ code: 200, data: { users: 2000, improvement: 90 } })
+})
+
+// 待处理活动数
+app.get('/gm/activities/pending-count', (req, res) => {
+  res.json({ code: 200, data: { count: 1 } })
+})
+
+// 活动横幅
+app.get('/gm/activities/banners', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 1, title: '世界睡眠日义诊', image: '/assets/images/banner-1.png', url: '/pages/activities/detail?id=1' },
+    { id: 2, title: '新品体验招募', image: '/assets/images/banner-2.png', url: '/pages/activities/detail?id=2' }
+  ] })
+})
+
+// 热门话题
+app.get('/gm/hot-topics', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 1, title: '9张新年幸运签，把好运分享给大家', heat: 1000 },
+    { id: 2, title: '连续3天都没有睡着了？', heat: 800 },
+    { id: 3, title: '有什么开心的事情分享吗？', heat: 600 },
+    { id: 4, title: '互动 | 2026，你最想完成的目标是____？', heat: 400 }
+  ] })
+})
+
+// 内容分类
+app.get('/gm/feed/categories', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 'recommend', name: '推荐' },
+    { id: 'knowledge', name: '睡眠知识' },
+    { id: 'expert', name: '专家解读' }
+  ] })
+})
+
+app.get('/gm/feed/categories/expert', (req, res) => {
+  res.json({ code: 200, data: { id: 'expert', name: '专家解读' } })
+})
+
+// 内容列表
+app.get('/gm/feed/list', (req, res) => {
+  const { category = 'recommend', page = 1, size = 10 } = req.query
+  res.json({ code: 200, data: [
+    { id: 1, title: '如何改善睡眠质量', summary: '睡眠质量直接影响健康...', cover: '/assets/images/cover-1.png', category, author: '张医生', views: 100 },
+    { id: 2, title: '失眠的常见原因', summary: '失眠原因多种多样...', cover: '/assets/images/cover-2.png', category, author: '李医生', views: 80 }
+  ] })
+})
+
+// 快捷入口徽章
+app.get('/gm/quick-entry/badge', (req, res) => {
+  res.json({ code: 200, data: { checkin: true, message: 3, activity: 1 } })
+})
+
+// 启动页图片
+app.get('/gm/splash/images', (req, res) => {
+  res.json({ code: 200, data: [
+    { id: 1, url: '/assets/images/splash-1.png' },
+    { id: 2, url: '/assets/images/splash-bg.png' }
+  ] })
+})
+
 const PORT = process.env.PORT || 3101
 app.listen(PORT, () => { console.log('智眠星运营终端服务运行在 http://localhost:'+PORT) })
