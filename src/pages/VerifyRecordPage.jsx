@@ -107,26 +107,21 @@ export default function VerifyRecordPage() {
   const loadRows = async () => {
     try {
       setLoading(true)
-      const query = buildQuery({
-        tab,
-        keyword: appliedFilter.keyword,
-        startDate: appliedFilter.startDate,
-        endDate: appliedFilter.endDate,
-        page: currentPage,
-        pageSize
-      })
-      const data = await requestJson(`/api/verify-records${query ? `?${query}` : ''}`)
-      const records = (data.data || data).records || data.list || [];
-      const pending = records.filter(r => r.verify_status === 'pending' || r.verify_status === 'PENDING').length;
-      const verified = records.filter(r => r.verify_status === 'verified' || r.verify_status === 'VERIFIED').length;
-      const totalAll = pending + verified;
-      setRows(records);
-      setTotal(totalAll);
-      setCounts({
-        all: totalAll,
-        pending,
-        verified,
-      })
+      // 统计用全量数据（tab=all），不受当前tab过滤影响
+      const countQuery = buildQuery({ tab: 'all', keyword: appliedFilter.keyword, startDate: appliedFilter.startDate, endDate: appliedFilter.endDate, page: 1, pageSize: 9999 })
+      const countData = await requestJson(`/api/verify-records${countQuery ? `?${countQuery}` : ''}`)
+      const allRecords = (countData.data || countData).records || countData.list || []
+      const pending = allRecords.filter(r => r.verify_status === 'pending' || r.verify_status === 'PENDING').length
+      const verified = allRecords.filter(r => r.verify_status === 'verified' || r.verify_status === 'VERIFIED').length
+      const totalAll = pending + verified
+      setCounts({ all: totalAll, pending, verified })
+
+      // 列表显示用带tab过滤的数据
+      const displayQuery = buildQuery({ tab, keyword: appliedFilter.keyword, startDate: appliedFilter.startDate, endDate: appliedFilter.endDate, page: currentPage, pageSize })
+      const data = await requestJson(`/api/verify-records${displayQuery ? `?${displayQuery}` : ''}`)
+      const records = (data.data || data).records || data.list || []
+      setRows(records)
+      setTotal(totalAll)
     } catch {
       setRows([])
       setTotal(0)
@@ -222,6 +217,7 @@ export default function VerifyRecordPage() {
             className={`order-tab-v2 ${tab === item.key ? 'active' : ''}`}
             onClick={() => {
               setTab(item.key)
+              setAppliedFilter((prev) => ({ ...prev, verifyStatus: item.key === 'all' ? '' : item.key }))
               setCurrentPage(1)
             }}
           >

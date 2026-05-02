@@ -1,0 +1,10 @@
+# Cloudflare Pages rewrites for zhimianxing-operation
+# 1) Copy this file to public/_redirects
+# 2) Replace YOUR_OPERATION_API_URL and YOUR_GM_API_URL with real public HTTPS URLs
+#
+# Example:
+# /api/* https://zhimianxing-operation-api.onrender.com/api/:splat 200
+# /gm/*  https://zhimianxing-gm-api.onrender.com/gm/:splat 200
+
+/api/* https://YOUR_OPERATION_API_URL/api/:splat 200
+/gm/*  https://YOUR_GM_API_URL/gm/:splat 200

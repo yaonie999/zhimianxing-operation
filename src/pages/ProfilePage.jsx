@@ -59,6 +59,8 @@ export default function ProfilePage() {
     username: profile.username,
     nickname: profile.nickname,
     gender: profile.gender,
+    phone: profile.phone,
+    studio: profile.studio,
     employeeId: profile.employeeId,
     department: profile.department,
     email: profile.email
@@ -77,6 +79,8 @@ export default function ProfilePage() {
       username: profile.username,
       nickname: profile.nickname,
       gender: profile.gender,
+      phone: profile.phone,
+      studio: profile.studio,
       employeeId: profile.employeeId,
       department: profile.department,
       email: profile.email
@@ -95,7 +99,7 @@ export default function ProfilePage() {
     const nextUser = {
       ...readUser(),
       name: editForm.nickname,
-      phone: editForm.username,
+      phone: editForm.phone,
       gender: editForm.gender,
       employeeId: editForm.employeeId,
       department: editForm.department,
@@ -123,6 +127,8 @@ export default function ProfilePage() {
       ...prev,
       username: editForm.username,
       nickname: editForm.nickname,
+      phone: editForm.phone,
+      studio: editForm.studio,
       gender: editForm.gender,
       employeeId: editForm.employeeId,
       department: editForm.department,
@@ -246,6 +252,8 @@ export default function ProfilePage() {
                   <option value="女">女</option>
                 </select>
               </label>
+              <label>手机号码<input value={editForm.phone || ''} readOnly style={{background:'#f0f0f0'}} /></label>
+              <label>所属工作室<input value={editForm.studio || ''} readOnly style={{background:'#f0f0f0'}} /></label>
               <label>工号<input value={editForm.employeeId} onChange={(e) => setEditForm((p) => ({ ...p, employeeId: e.target.value }))} /></label>
               <label>所属部门<input value={editForm.department} onChange={(e) => setEditForm((p) => ({ ...p, department: e.target.value }))} /></label>
               <label>邮箱<input value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} /></label>

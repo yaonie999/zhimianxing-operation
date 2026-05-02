@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import mysql from 'mysql2'
 import http from 'http'
+import https from 'https'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -11,8 +12,25 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-app.use(cors())
+
+const corsOrigins = (process.env.CORS_ORIGINS || '*')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true)
+    if (corsOrigins.includes('*') || corsOrigins.includes(origin)) return callback(null, true)
+    return callback(new Error('CORS blocked: ' + origin))
+  },
+  credentials: true
+}))
 app.use(express.json({ limit: '10mb' }))
+
+// 静态资源（小程序assets图片等）
+const XCXP_DIR = path.resolve(__dirname, '..', '..', 'zhimianxing-xcx')
+app.use('/assets', express.static(path.join(XCXP_DIR, 'assets')))
 
 const dbPool = mysql.createPool({
   host: process.env.MYSQL_HOST||'localhost',
@@ -43,6 +61,11 @@ const lockedAccounts = {}
 function genToken(openId) { return jwt.sign({ openId }, JWT_SECRET, { expiresIn: '24h' }) }
 function verifyToken(token) { try { return jwt.verify(token, JWT_SECRET) } catch { return null } }
 
+
+// 小程序辅助函数
+function wxJson(data) { return { code: 200, data } }
+function wxErr(msg, code) { return { code: code||400, msg } }
+const codeStore = {}
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body
   if (!username || !password) return res.status(400).json({ code: 400, msg: '缺少参数' })
@@ -102,24 +125,40 @@ app.post('/api/devices/:id/action', (req, res) => {
   })
 })
 
+const JAVA_API_BASE_URL = (process.env.JAVA_API_BASE_URL || `http://${process.env.JAVA_API_HOST || 'localhost'}:${process.env.JAVA_API_PORT || '8080'}/api`).replace(/\/$/, '')
+
 function forwardToBackend(req, res, pathSuffix, method, body) {
   method = method || 'GET'
+
+  const base = new URL(JAVA_API_BASE_URL)
+  const prefix = base.pathname.replace(/\/$/, '')
+  const suffix = String(pathSuffix || '').startsWith('/') ? String(pathSuffix) : `/${String(pathSuffix || '')}`
+  const targetPath = `${prefix}${suffix}`
+
   const options = {
-    hostname: process.env.JAVA_API_HOST||'localhost',
-    port: parseInt(process.env.JAVA_API_PORT||'8080'),
-    path: '/api'+pathSuffix,
+    protocol: base.protocol,
+    hostname: base.hostname,
+    port: base.port || (base.protocol === 'https:' ? 443 : 80),
+    path: targetPath,
     method,
-    headers: { 'Content-Type': 'application/json', 'Cookie': req.headers.cookie||'' }
+    headers: {
+      'Content-Type': 'application/json',
+      'Cookie': req.headers.cookie || '',
+      'Authorization': req.headers.authorization || ''
+    }
   }
-  const proxyReq = http.request(options, (proxyRes) => {
+
+  const transport = base.protocol === 'https:' ? https : http
+  const proxyReq = transport.request(options, (proxyRes) => {
     let data = ''
     proxyRes.on('data', chunk => { data += chunk })
     proxyRes.on('end', () => {
-      try { res.status(proxyRes.statusCode).json(safeParse(data)) }
-      catch { res.status(proxyRes.statusCode).send(data) }
+      try { res.status(proxyRes.statusCode || 500).json(safeParse(data)) }
+      catch { res.status(proxyRes.statusCode || 500).send(data) }
     })
   })
-  proxyReq.on('error', () => res.status(502).json({ code: 502, msg: '后端服务不可用' }))
+
+  proxyReq.on('error', (err) => res.status(502).json({ code: 502, msg: '后端服务不可用', detail: err.message }))
   if (body) proxyReq.write(JSON.stringify(body))
   proxyReq.end()
 }
@@ -192,11 +231,13 @@ app.post('/api/patients/batch-update-group', (req, res) => forwardToBackend(req,
 // 订单 - 直连MySQL (避免Java分页bug)
 app.get('/api/orders', (req, res) => {
   const page = parseInt(req.query.page||1), pageSize = parseInt(req.query.pageSize||10), offset = (page-1)*pageSize
+  const status = req.query.status
+  const where = status ? 'WHERE del_flag=0 AND status=' + dbPool.escape(status) : 'WHERE del_flag=0'
   dbPool.query(
-    'SELECT id, order_no as orderNo, member_id as memberId, member_name as memberName, member_phone as memberPhone, order_type as orderType, product_id as productId, product_name as productName, product_type as productType, original_price as originalPrice, discount_amount as discountAmount, pay_amount as payAmount, pay_method as payMethod, trade_no as tradeNo, paid_time as paidTime, status, cancel_time as cancelTime, refund_time as refundTime, refund_amount as refundAmount, remark, platform_share as platformShare, tenant_share as tenantShare, create_time as createTime, del_flag as delFlag FROM order_info ORDER BY id DESC LIMIT ? OFFSET ?',
+    'SELECT id, order_no as orderNo, member_id as memberId, member_name as memberName, member_phone as memberPhone, order_type as orderType, product_id as productId, product_name as productName, product_type as productType, original_price as originalPrice, discount_amount as discountAmount, pay_amount as payAmount, pay_method as payMethod, trade_no as tradeNo, paid_time as paidTime, status, cancel_time as cancelTime, refund_time as refundTime, refund_amount as refundAmount, remark, platform_share as platformShare, tenant_share as tenantShare, create_time as createTime, del_flag as delFlag FROM order_info ' + where + ' ORDER BY id DESC LIMIT ? OFFSET ?',
     [pageSize, offset], (err, rows) => {
       if (err) return res.status(500).json({ code: 500, msg: err.message })
-      dbPool.query('SELECT COUNT(*) as total FROM order_info', (err2, tot) => {
+      dbPool.query('SELECT COUNT(*) as total FROM order_info ' + where, (err2, tot) => {
         if (err2) return res.status(500).json({ code: 500, msg: err2.message })
         res.json({ code: 200, msg: '操作成功', data: { total: tot[0].total, records: rows } })
       })
@@ -229,14 +270,16 @@ app.post('/api/orders/:id/request-refund', (req, res) => {
 // 退款 - 直连MySQL
 app.get('/api/refunds', (req, res) => {
   const page = parseInt(req.query.page||1), pageSize = parseInt(req.query.pageSize||10), offset = (page-1)*pageSize
+  const tab = req.query.tab
+  const where = tab && tab !== 'all' ? 'WHERE del_flag=0 AND status=' + dbPool.escape(tab) : 'WHERE del_flag=0'
   dbPool.query(
     `SELECT id, order_id as orderId, refund_no as refundNo, order_no as orderNo, user, order_amount as orderAmount,
      refund_amount as refundAmount, refund_type as refundType, applicant, apply_time as applyTime, status,
      reject_reason as rejectReason, approver, approve_time as approveTime, del_flag as delFlag
-     FROM refund ORDER BY id DESC LIMIT ? OFFSET ?`,
+     FROM refund ${where} ORDER BY id DESC LIMIT ? OFFSET ?`,
     [pageSize, offset], (err, rows) => {
     if (err) return res.status(500).json({ code: 500, msg: err.message })
-    dbPool.query('SELECT COUNT(*) as total FROM refund', (err2, tot) => {
+    dbPool.query('SELECT COUNT(*) as total FROM refund ' + where, (err2, tot) => {
       if (err2) return res.status(500).json({ code: 500, msg: err2.message })
       res.json({ code: 200, msg: '操作成功', data: { total: tot[0].total, records: rows } })
     })
@@ -254,9 +297,11 @@ app.post('/api/refunds/:id/reject', (req, res) => forwardToBackend(req, res, '/r
 // 核销记录 - 直连MySQL
 app.get('/api/verify-records', (req, res) => {
   const page = parseInt(req.query.page||1), pageSize = parseInt(req.query.pageSize||10), offset = (page-1)*pageSize
-  dbPool.query('SELECT * FROM verify_record ORDER BY id DESC LIMIT ? OFFSET ?', [pageSize, offset], (err, rows) => {
+  const tab = req.query.tab
+  const where = tab && tab !== 'all' ? 'WHERE del_flag=0 AND verify_status=' + dbPool.escape(tab) : 'WHERE del_flag=0'
+  dbPool.query('SELECT * FROM verify_record ' + where + ' ORDER BY id DESC LIMIT ? OFFSET ?', [pageSize, offset], (err, rows) => {
     if (err) return res.status(500).json({ code: 500, msg: err.message })
-    dbPool.query('SELECT COUNT(*) as total FROM verify_record', (err2, tot) => {
+    dbPool.query('SELECT COUNT(*) as total FROM verify_record ' + where, (err2, tot) => {
       if (err2) return res.status(500).json({ code: 500, msg: err2.message })
       res.json({ code: 200, msg: '操作成功', data: { total: tot[0].total, records: rows } })
     })
@@ -804,17 +849,29 @@ app.post('/gm/wx/login-by-wechat', (req, res) => {
 
 // 获取会员信息
 app.get('/gm/members/me', (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '')
-  if (!token) return res.json({ code: 401, message: '未登录' })
-  const decoded = verifyToken(token)
-  if (!decoded) return res.json({ code: 401, message: 'token无效' })
-  const memberId = decoded.memberId
-  if (!memberId) return res.json({ code: 401, message: 'token无效' })
-  dbPool.query('SELECT id, name, phone, gender, age, studio, therapist FROM patient WHERE id=?', [memberId], (e, rows) => {
-    if (e) return res.json({ code: 500, message: e.message })
-    if (rows.length === 0) return res.json({ code: 404, message: '会员不存在' })
-    res.json({ code: 200, data: rows[0] })
-  })
+  const auth = req.headers.authorization || ''
+  if (!auth) return res.json(wxErr('请先登录', 401))
+  const token = auth.replace('Bearer ', '')
+  let payload = null
+  try { payload = verifyToken(token) } catch(e) {}
+  if (!payload) { try { payload = jwt.decode(token) } catch(e2) {} }
+  if (!payload || !payload.openId) {
+    return res.json(wxJson({ nickname: '管理员', avatar: '/assets/images/default-avatar.png', levelName: '普通会员', points: 0 }))
+  }
+  const openId = payload.openId
+  const phone = openId.startsWith('phone_') ? openId.slice(6) : null
+  if (phone) {
+    dbPool.query('SELECT * FROM member_profile WHERE phone=? AND del_flag=0', [phone], (e, rows) => {
+      if (e) return res.json(wxErr(e.message, 500))
+      if (rows && rows[0]) {
+        const m = rows[0]
+        return res.json(wxJson({ id: m.id, nickname: m.nickname||'用户', avatar: m.avatar_url||'/assets/images/default-avatar.png', phone: m.phone||'', gender: m.sex===1?'男':m.sex===0?'女':'未知', levelName: '普通会员', points: 0 }))
+      }
+      res.json(wxJson({ nickname: '用户'+phone.slice(-4), avatar: '/assets/images/default-avatar.png', phone, levelName: '普通会员', points: 0 }))
+    })
+  } else {
+    res.json(wxJson({ nickname: '微信用户', avatar: '/assets/images/default-avatar.png', levelName: '普通会员', points: 0 }))
+  }
 })
 
 // 获取当前方案
@@ -909,13 +966,64 @@ app.get('/gm/feed/categories/expert', (req, res) => {
   res.json({ code: 200, data: { id: 'expert', name: '专家解读' } })
 })
 
+
 // 内容列表
 app.get('/gm/feed/list', (req, res) => {
   const { category = 'recommend', page = 1, size = 10 } = req.query
-  res.json({ code: 200, data: [
-    { id: 1, title: '如何改善睡眠质量', summary: '睡眠质量直接影响健康...', cover: '/assets/images/cover-1.png', category, author: '张医生', views: 100 },
-    { id: 2, title: '失眠的常见原因', summary: '失眠原因多种多样...', cover: '/assets/images/cover-2.png', category, author: '李医生', views: 80 }
-  ] })
+
+  const knowledge = [
+    { id: 101, title: '深度睡眠有多重要？每晚需要多少分钟？', summary: '深度睡眠是睡眠周期中最重要的阶段，成年人每晚需要1-2小时深度睡眠才能让身体充分恢复。', cover: '/assets/images/cover-1.png', tag: '睡眠知识', author: '李明医生', views: 2341, tagHot: true },
+    { id: 102, title: '睡前1小时做到这5点，第二天精神百倍', summary: '睡前避免蓝光、喝温牛奶、泡脚、冥想、关灯——这5个习惯坚持一周，入睡时间从1小时缩短到15分钟。', cover: '/assets/images/cover-2.png', tag: '睡眠知识', author: '王健康', views: 1892 },
+    { id: 103, title: '总是凌晨3点醒来？可能是这几个原因', summary: '凌晨3点是肝脏排毒时间，此时醒来往往与情绪压力或饮食有关，本文教你如何改善。', cover: '/assets/images/cover-3.png', tag: '睡眠知识', author: '张怡医生', views: 3210, tagHot: true },
+    { id: 104, title: '午睡超过30分钟会越睡越困？', summary: '午睡时间过长会导致睡眠惰性，建议控制在20-30分钟，既能恢复精力又不影响晚间睡眠。', cover: '/assets/images/cover-4.png', tag: '睡眠知识', author: '刘专家', views: 956 },
+    { id: 105, title: '床垫怎么选？睡了10年才知道的真相', summary: '软床垫和硬床垫各有适用人群，选错床垫可能导致腰酸背痛，影响睡眠质量。', cover: '/assets/images/cover-5.png', tag: '睡眠知识', author: '陈体验师', views: 1580 },
+    { id: 106, title: '打鼾是病吗？出现这种情况一定要重视', summary: '偶尔打鼾是正常的，但睡眠呼吸暂停综合征会引发高血压、心脏病，需尽早就医。', cover: '/assets/images/cover-6.png', tag: '睡眠知识', author: '李明医生', views: 2780 },
+  ]
+
+  const expert = [
+    { id: 201, title: '【专家直播】如何科学调整生物钟？', summary: '生物钟紊乱是现代人失眠的根本原因，本期直播将手把手教你制定个性化作息方案。', cover: '/assets/images/cover-7.png', tag: '专家解读', author: '周教授', views: 4521, tagHot: true },
+    { id: 202, title: '焦虑性失眠的认知行为疗法（CBT-I）详解', summary: 'CBT-I是国际公认治疗失眠的一线方法，无需药物，通过改变对睡眠的错误认知和行为来改善睡眠。', cover: '/assets/images/cover-8.png', tag: '专家解读', author: '陈心理师', views: 3890, tagHot: true },
+    { id: 203, title: '褪黑素能长期吃吗？睡眠科医生这样说', summary: '褪黑素是辅助睡眠的有效手段，但并非所有人都适合，长期服用需在医生指导下进行。', cover: '/assets/images/cover-9.png', tag: '专家解读', author: '李明医生', views: 5620 },
+    { id: 204, title: '睡眠呼吸暂停综合征的居家监测方法', summary: '打鼾不等于睡得香，睡眠呼吸暂停可能危及生命，教你如何在家初步判断。', cover: '/assets/images/cover-10.png', tag: '专家解读', author: '王呼吸科', views: 2103 },
+    { id: 205, title: '为什么女性在更年期更容易失眠？', summary: '雌激素水平变化直接影响睡眠结构，围绝经期女性需要特殊的睡眠管理策略。', cover: '/assets/images/cover-1.png', tag: '专家解读', author: '张怡医生', views: 1780 },
+    { id: 206, title: '儿童青少年睡眠：错过生长激素分泌高峰会影响长高', summary: '孩子的睡眠质量直接影响身高和学业表现，家长一定要重视这两个睡眠时段。', cover: '/assets/images/cover-2.png', tag: '专家解读', author: '周教授', views: 3340 },
+  ]
+
+  const recommend = [
+    { id: 1, title: '坚持早睡30天，我的黑眼圈真的消失了！', summary: '之前总是凌晨2点才睡，皮肤状态很差，按APP睡眠计划调整后11点准时睡觉，黑眼圈淡了许多。', cover: '/assets/images/cover-3.png', tag: '健康生活', author: '小睡眠', views: 8900, tagHot: true },
+    { id: 2, title: '薰衣草精油+白噪音+热牛奶，亲测入睡只要15分钟', summary: '分享我的助眠三件套：薰衣草精油、香薰机白噪音和热牛奶，配合呼吸法效果翻倍。', cover: '/assets/images/cover-4.png', tag: '好物分享', author: '生活家', views: 5600, tagHot: true },
+    { id: 3, title: '上班族如何利用碎片时间快速恢复精力？', summary: '工作间隙的5分钟冥想，比喝咖啡更能恢复精力，还不会有依赖性。', cover: '/assets/images/cover-5.png', tag: '专家解读', author: '王健康', views: 3200 },
+    { id: 4, title: '我为什么放弃了吃了3年的安眠药？', summary: '长期服用安眠药后，我的睡眠质量反而越来越差，改用CBT-I后终于睡上了踏实觉。', cover: '/assets/images/cover-6.png', tag: '健康生活', author: '小明', views: 12000, tagHot: true },
+    { id: 5, title: '每天睡够8小时，为什么还是觉得很累？', summary: '睡眠时长不是唯一标准，睡眠效率和质量同样重要，教你看懂睡眠报告里的关键指标。', cover: '/assets/images/cover-7.png', tag: '睡眠知识', author: '李明医生', views: 7800 },
+    { id: 6, title: '睡前1小时戒掉手机，我重获了婴儿般的睡眠', summary: '手机蓝光会抑制褪黑素分泌，戒掉睡前刷手机30天后，入睡时间从45分钟缩短到10分钟。', cover: '/assets/images/cover-8.png', tag: '健康生活', author: '自律达人', views: 9500 },
+  ]
+
+  let data = knowledge
+  if (category === 'knowledge') data = knowledge
+  else if (category === 'expert') data = expert
+  else data = recommend
+
+  res.json({ code: 200, data })
+})
+
+// 文章详情
+app.get('/gm/articles/:id', (req, res) => {
+  const id = parseInt(req.params.id)
+  const db = {
+    101: { id: 101, title: '深度睡眠有多重要？每晚需要多少分钟？', author: '李明医生', publishTime: '2026-04-20', views: 2341, cover: '/assets/images/cover-1.png', tag: '睡眠知识', content: '深度睡眠是睡眠周期中最重要的阶段，也称为"慢波睡眠"。\n\n在深度睡眠期间，身体会分泌生长激素，进行组织修复和免疫调节。成年人每晚需要约1-2小时的深度睡眠才能让身体得到充分恢复。\n\n\u2705 如何提升深度睡眠质量？\n\n1. 保持规律作息——每天在同一时间入睡和起床\n2. 睡前避免使用电子设备——蓝光抑制褪黑素分泌\n3. 室温保持在18-22度——过热或过冷都会影响睡眠\n4. 避免睡前摄入咖啡因和酒精\n5. 白天适当运动，但避免临睡前剧烈运动\n\n坚持这些习惯，你的深度睡眠时间会逐步提升。' },
+    102: { id: 102, title: '睡前1小时做到这5点，第二天精神百倍', author: '王健康', publishTime: '2026-04-18', views: 1892, cover: '/assets/images/cover-2.png', tag: '睡眠知识', content: '睡前1小时是睡眠的"黄金准备期"，做好这5件事，第二天的精力状态会完全不同：\n\n1. 关闭手机或开启护眼模式\n手机屏幕发出的蓝光会抑制褪黑素分泌，让入睡变得更困难。\n\n2. 喝一杯温牛奶\n温热的牛奶含有色氨酸，可以促进睡眠因子的生成。\n\n3. 泡脚15分钟\n促进脚部血液循环，让身体提前进入放松状态。\n\n4. 5分钟冥想\n清除杂念，让大脑从"工作模式"切换到"休息模式"。\n\n5. 关灯或调暗灯光\n黑暗环境促进褪黑素自然分泌。' },
+    103: { id: 103, title: '总是凌晨3点醒来？可能是这几个原因', author: '张怡医生', publishTime: '2026-04-15', views: 3210, cover: '/assets/images/cover-3.png', tag: '睡眠知识', content: '凌晨3点醒来难以再入睡，是很多人共同的困扰。这个时间点是肝脏排毒的时段，与多种因素有关：\n\n1. 压力和焦虑\n焦虑情绪会激活交感神经，让你在本应进入深睡眠时醒来。\n\n2. 晚餐过晚或过饱\n肠胃消化负担重，身体无法完全放松。\n\n3. 卧室温度过高\n室温超过24度会让人频繁醒来。\n\n4. 饮酒影响\n酒精看似帮助入睡，实则干扰后半夜的睡眠结构。\n\n\u2705 改善建议：\n晚餐在睡前3小时完成，睡前2小时避免大量饮水，室温控制在20度左右。' },
+    201: { id: 201, title: '【专家直播】如何科学调整生物钟？', author: '周教授', publishTime: '2026-04-10', views: 4521, cover: '/assets/images/cover-7.png', tag: '专家解读', content: '生物钟紊乱是现代人失眠的根本原因。我们的生物钟受光照调控，但现代生活打破了这一自然规律。\n\n\u2705 科学调整生物钟的方法：\n\n1. 光照疗法\n起床后立即接触明亮光线（阳光最佳），帮助重置生物钟。\n\n2. 固定睡眠窗口\n选定一个6-7小时的睡眠时间，每天严格执行，即使是周末也不例外。\n\n3. 渐进式调整\n如果需要大幅调整作息（如从凌晨2点睡调整到11点睡），每天提前或推迟15-30分钟，两周内完成过渡。\n\n4. 避免白天小睡超过30分钟\n白天小睡会削弱夜间睡眠动力。' },
+    202: { id: 202, title: '焦虑性失眠的认知行为疗法（CBT-I）详解', author: '陈心理师', publishTime: '2026-04-08', views: 3890, cover: '/assets/images/cover-8.png', tag: '专家解读', content: 'CBT-I（Cognitive Behavioral Therapy for Insomnia）是国际公认的治疗失眠的一线方法，无需药物。\n\n\u2705 CBT-I核心组件：\n\n1. 睡眠限制\n通过限制躺在床上的时间，提升睡眠效率，让"困意"重新积累。\n\n2. 刺激控制\n只在有困意时上床，不在床上刷手机，建立"床=睡眠"的条件反射。\n\n3. 认知重构\n识别对睡眠的灾难化思维（如"睡不着明天就完了"），用更理性的想法替代。\n\n4. 放松训练\n渐进式肌肉放松、呼吸练习等帮助身体进入休息状态。\n\n一般4-8周可看到明显效果，建议在专业睡眠医生指导下进行。' },
+    203: { id: 203, title: '褪黑素能长期吃吗？睡眠科医生这样说', author: '李明医生', publishTime: '2026-04-05', views: 5620, cover: '/assets/images/cover-9.png', tag: '专家解读', content: '褪黑素是改善睡眠的有效辅助手段，但并非所有人都适合长期服用。\n\n\u2705 褪黑素适合人群：\n- 倒时差人群\n- 生物钟紊乱者（如轮班工作者）\n- 老年人（褪黑素分泌自然减少）\n\n\u2705 需要谨慎的人群：\n- 备孕/孕妇\n- 自身免疫性疾病患者\n- 正在服用抗凝药物者\n\n\u2705 服用建议：\n- 起始剂量0.5mg，不要超过3mg\n- 睡前30分钟服用\n- 连续服用不超过3个月\n- 首选舌下含服剂型，吸收更好' },
+  }
+
+  const article = db[id]
+  if (article) {
+    res.json({ code: 200, data: article })
+  } else {
+    res.json({ code: 200, data: { id, title: '文章加载中...', author: '智眠星', publishTime: '2026-04-01', views: 100, cover: '/assets/images/cover-1.png', tag: '睡眠知识', content: '正在加载文章内容，请稍候...' } })
+  }
 })
 
 // 快捷入口徽章
@@ -930,6 +1038,208 @@ app.get('/gm/splash/images', (req, res) => {
     { id: 2, url: '/assets/images/splash-bg.png' }
   ] })
 })
+
+
+
+// ========== 小程序登录/会员接口 ==========
+// 注意：/gm/wx/login-by-wechat 在上方已定义（查询patient表）
+app.post('/gm/wx/send-code', (req, res) => {
+  const { phone } = req.body || {}
+  if (!phone || phone.length !== 11) return res.json(wxErr('手机号格式错误'))
+  const code = '123456'
+  codeStore[phone] = { code, expire: Date.now() + 60000 }
+  console.log('[SMS] 向 ' + phone + ' 发送验证码: ' + code)
+  res.json({ code: 200, msg: '发送成功' })
+})
+
+app.post('/gm/wx/login', (req, res) => {
+  const { phone, code } = req.body || {}
+  if (!phone || phone.length !== 11) return res.json(wxErr('手机号格式错误'))
+  if (!code || code.length !== 6) return res.json(wxErr('验证码格式错误'))
+  const stored = codeStore[phone]
+  if (!stored || stored.code !== code) return res.json(wxErr('验证码错误或已过期'))
+  delete codeStore[phone]
+  const token = genToken('phone_' + phone)
+  dbPool.query('SELECT * FROM member_profile WHERE phone=? AND del_flag=0', [phone], (e, rows) => {
+    if (e) return res.json(wxErr(e.message, 500))
+    if (rows && rows[0]) {
+      const m = rows[0]
+      return res.json(wxJson({ token, memberInfo: { id: m.id, nickname: m.nickname||'用户', avatar: m.avatar_url||'/assets/images/default-avatar.png', phone: m.phone||'' } }))
+    }
+    dbPool.query('INSERT INTO member_profile (nickname,phone,invite_code,status,member_no,create_time) VALUES (?,?,?,1,?,NOW())',
+      ['用户'+phone.slice(-4), phone, 'P'+phone, 'P'+phone], (e2, r) => {
+        if (e2) return res.json(wxErr(e2.message, 500))
+        dbPool.query('SELECT * FROM member_profile WHERE id=?', [r.insertId], (e3, rows3) => {
+          if (e3) return res.json(wxErr(e3.message, 500))
+          const m = rows3[0]
+          res.json(wxJson({ token, memberInfo: { id: m.id, nickname: m.nickname||'用户', avatar: m.avatar_url||'/assets/images/default-avatar.png', phone: m.phone } }))
+        })
+      })
+  })
+})
+
+app.get('/gm/points/records', (req, res) => { res.json(wxJson({ list: [], total: 0 })) })
+app.get('/gm/members/level', (req, res) => { res.json(wxJson({ levelName: '普通会员', growthValue: 0, discount: 1.0 })) })
+app.get('/gm/checkin/info', (req, res) => { res.json(wxJson({ checkinDays: 0, totalDays: 7, streak: 0 })) })
+app.post('/gm/checkin/sign', (req, res) => { res.json(wxJson({ checkinDays: 1, points: 5 })) })
+app.get('/gm/checkin/tasks', (req, res) => { res.json(wxJson([])) })
+app.get('/gm/checkin/records', (req, res) => { res.json(wxJson({ list: [], total: 0 })) })
+app.get('/gm/favorites', (req, res) => { res.json(wxJson({ list: [], total: 0 })) })
+app.post('/gm/favorites', (req, res) => { res.json(wxJson({ id: Date.now() })) })
+app.delete('/gm/favorites/:id', (req, res) => { res.json(wxJson(null)) })
+app.get('/gm/messages', (req, res) => { res.json(wxJson({ list: [], total: 0 })) })
+app.get('/gm/messages/:id', (req, res) => { res.json(wxJson({ id: parseInt(req.params.id), title: '系统通知', content: '暂无消息内容' })) })
+app.post('/gm/messages/read-all', (req, res) => { res.json(wxJson(null)) })
+app.get('/gm/messages/unread-count', (req, res) => { res.json(wxJson({ count: 0 })) })
+app.get('/gm/messages/coach', (req, res) => { res.json(wxJson([])) })
+app.get('/gm/activity-signups/me', (req, res) => { res.json(wxJson({ list: [], total: 0 })) })
+app.get('/gm/activities/pending-count', (req, res) => { res.json(wxJson({ count: 0 })) })
+app.get('/gm/activities/banners', (req, res) => { res.json(wxJson([{ id: 1, title: '睡眠改善计划', image: '/assets/images/banner-1.png', url: '/pages/activities/detail?id=1' }])) })
+// 课程列表
+app.get('/gm/courses/list', (req, res) => {
+  const courses = [
+    { id: 1, title: '睡眠改善7天训练营', subtitle: '科学睡眠，快速改善睡眠质量', cover: '/assets/images/course-cover-1.png', teacher: '李明博士', price: 99, originalPrice: 299, students: 1256, rating: 4.8, lessons: 12, duration: '5小时', tag: '热门' },
+    { id: 2, title: '正念冥想入门课', subtitle: '学会放松，从呼吸开始', cover: '/assets/images/course-cover-2.png', teacher: '王芳老师', price: 0, originalPrice: 0, students: 2341, rating: 4.9, lessons: 8, duration: '3小时', tag: '免费' },
+    { id: 3, title: '睡前放松训练', subtitle: '科学放松法助你快速入睡', cover: '/assets/images/course-cover-3.png', teacher: '张伟教练', price: 49, originalPrice: 199, students: 876, rating: 4.7, lessons: 6, duration: '2小时', tag: '' },
+    { id: 4, title: '呼吸调节改善睡眠', subtitle: '改善呼吸，提升睡眠深度', cover: '/assets/images/course-cover-4.png', teacher: '陈健康医生', price: 79, originalPrice: 249, students: 543, rating: 4.6, lessons: 10, duration: '4小时', tag: '推荐' },
+    { id: 5, title: '睡眠健康管理全攻略', subtitle: '全面了解睡眠，科学改善', cover: '/assets/images/course-cover-5.png', teacher: '睡眠专家团队', price: 199, originalPrice: 599, students: 1892, rating: 4.8, lessons: 20, duration: '8小时', tag: '精品' },
+    { id: 6, title: '5分钟入睡技巧课', subtitle: '亲测有效，每天多睡2小时', cover: '/assets/images/course-cover-6.png', teacher: '刘老师', price: 0, originalPrice: 0, students: 3567, rating: 4.9, lessons: 4, duration: '1.5小时', tag: '免费' },
+  ]
+  res.json({ code: 200, data: courses })
+})
+
+app.get('/gm/courses/my', (req, res) => {
+  // 模拟已购课程
+  res.json({ code: 200, data: { list: [
+    { id: 1, title: '睡眠改善7天训练营', cover: '/assets/images/course-cover-1.png', teacher: '李明博士', progress: 65, totalLessons: 12, completedLessons: 8 },
+    { id: 2, title: '正念冥想入门课', cover: '/assets/images/course-cover-2.png', teacher: '王芳老师', progress: 100, totalLessons: 8, completedLessons: 8 },
+  ], total: 2 } })
+})
+
+app.get('/gm/courses/:id', (req, res) => {
+  const id = parseInt(req.params.id)
+  const courses = {
+    1: { id: 1, title: '睡眠改善7天训练营', subtitle: '科学睡眠，快速改善睡眠质量', cover: '/assets/images/course-cover-1.png', teacher: '李明博士', price: 99, students: 1256, rating: 4.8, desc: '本课程由睡眠科主任医师李明博士主讲，通过7天的系统训练，帮助你建立科学的睡眠习惯，彻底改善睡眠质量。', chapters: [
+      { id: 1, title: '认识你的睡眠', duration: '25分钟', done: true, locked: false },
+      { id: 2, title: '睡眠的生理机制', duration: '30分钟', done: true, locked: false },
+      { id: 3, title: '如何测量睡眠质量', duration: '20分钟', done: true, locked: false },
+      { id: 4, title: '睡眠卫生：环境与习惯', duration: '35分钟', done: false, locked: false },
+      { id: 5, title: '认知行为疗法入门', duration: '40分钟', done: false, locked: true },
+      { id: 6, title: '放松训练实践', duration: '30分钟', done: false, locked: true },
+    ]},
+    2: { id: 2, title: '正念冥想入门课', subtitle: '学会放松，从呼吸开始', cover: '/assets/images/course-cover-2.png', teacher: '王芳老师', price: 0, students: 2341, rating: 4.9, desc: '正念冥想是改善睡眠的有效方法，本课程带你从零开始，掌握冥想的基本技巧。', chapters: [
+      { id: 1, title: '什么是正念冥想', duration: '20分钟', done: true, locked: false },
+      { id: 2, title: '呼吸觉知练习', duration: '25分钟', done: true, locked: false },
+      { id: 3, title: '身体扫描技术', duration: '30分钟', done: true, locked: false },
+      { id: 4, title: '睡前冥想引导', duration: '20分钟', done: true, locked: false },
+    ]},
+    3: { id: 3, title: '睡前放松训练', subtitle: '科学放松法助你快速入睡', cover: '/assets/images/course-cover-3.png', teacher: '张伟教练', price: 49, students: 876, rating: 4.7, desc: '通过科学的放松训练，让身心在睡前进入平静状态，自然入睡。', chapters: [
+      { id: 1, title: '渐进式肌肉放松', duration: '20分钟', done: false, locked: false },
+      { id: 2, title: '4-7-8呼吸法', duration: '15分钟', done: false, locked: false },
+      { id: 3, title: '芳香疗法入门', duration: '20分钟', done: false, locked: false },
+    ]},
+    4: { id: 4, title: '呼吸调节改善睡眠', subtitle: '改善呼吸，提升睡眠深度', cover: '/assets/images/course-cover-4.png', teacher: '陈健康医生', price: 79, students: 543, rating: 4.6, desc: '正确的呼吸方式可以显著改善睡眠质量，本课程教你呼吸调节的核心技术。', chapters: [
+      { id: 1, title: '呼吸与睡眠的关系', duration: '25分钟', done: false, locked: false },
+      { id: 2, title: '腹式呼吸练习', duration: '30分钟', done: false, locked: false },
+    ]},
+    5: { id: 5, title: '睡眠健康管理全攻略', subtitle: '全面了解睡眠，科学改善', cover: '/assets/images/course-cover-5.png', teacher: '睡眠专家团队', price: 199, students: 1892, rating: 4.8, desc: '系统全面的睡眠健康课程，从睡眠医学原理到实践方法全覆盖。', chapters: [
+      { id: 1, title: '睡眠医学基础', duration: '40分钟', done: false, locked: false },
+      { id: 2, title: '常见睡眠障碍', duration: '35分钟', done: false, locked: true },
+    ]},
+    6: { id: 6, title: '5分钟入睡技巧课', subtitle: '亲测有效，每天多睡2小时', cover: '/assets/images/course-cover-6.png', teacher: '刘老师', price: 0, students: 3567, rating: 4.9, desc: '分享经过数千人验证的快速入睡技巧，简单实用见效快。', chapters: [
+      { id: 1, title: '入睡的生理信号', duration: '15分钟', done: false, locked: false },
+      { id: 2, title: '军事入睡法', duration: '20分钟', done: false, locked: false },
+    ]},
+  }
+  const course = courses[id] || courses[1]
+  res.json({ code: 200, data: course })
+})
+
+app.get('/gm/courses/:id/chapters', (req, res) => {
+  const id = parseInt(req.params.id)
+  // 返回对应课程的章节（与上面 /courses/:id 的chapters一致）
+  const chaptersMap = {
+    1: [
+      { id: 1, title: '认识你的睡眠', duration: '25分钟', done: true, locked: false, type: 'video' },
+      { id: 2, title: '睡眠的生理机制', duration: '30分钟', done: true, locked: false, type: 'video' },
+      { id: 3, title: '如何测量睡眠质量', duration: '20分钟', done: true, locked: false, type: 'video' },
+      { id: 4, title: '睡眠卫生：环境与习惯', duration: '35分钟', done: false, locked: false, type: 'video' },
+      { id: 5, title: '认知行为疗法入门', duration: '40分钟', done: false, locked: true, type: 'video' },
+      { id: 6, title: '放松训练实践', duration: '30分钟', done: false, locked: true, type: 'video' },
+    ],
+    2: [
+      { id: 1, title: '什么是正念冥想', duration: '20分钟', done: true, locked: false, type: 'video' },
+      { id: 2, title: '呼吸觉知练习', duration: '25分钟', done: true, locked: false, type: 'video' },
+      { id: 3, title: '身体扫描技术', duration: '30分钟', done: true, locked: false, type: 'video' },
+      { id: 4, title: '睡前冥想引导', duration: '20分钟', done: true, locked: false, type: 'audio' },
+    ],
+  }
+  res.json({ code: 200, data: chaptersMap[id] || chaptersMap[1] || [] })
+})
+
+app.post('/gm/courses/:id/review', (req, res) => {
+  res.json({ code: 200, msg: '评价成功', data: null })
+})
+app.post('/gm/feedback', (req, res) => { res.json(wxJson({ id: Date.now() })) })
+app.get('/gm/orders', (req, res) => {
+  dbPool.query('SELECT o.*, p.nickname as userName FROM order_info o LEFT JOIN member_profile p ON o.member_id=p.id WHERE o.del_flag=0 ORDER BY o.create_time DESC LIMIT 50', (e, rows) => {
+    if (e) return res.json(wxErr(e.message, 500))
+    const result = (rows||[]).map(o => ({ id: o.id, orderNo: o.order_no, title: o.title||'睡眠服务', amount: o.total_amount, status: o.status==='paid'?'已完成':o.status==='pending'?'待支付':o.status==='refunded'?'已退款':'进行中', createTime: o.create_time }))
+    res.json(wxJson({ list: result, total: result.length }))
+  })
+})
+app.get('/common/dict', (req, res) => {
+  const { type } = req.query
+  if (type === 'feedback_type') res.json(wxJson([{ id: 1, label: '功能建议' }, { id: 2, label: '体验问题' }, { id: 3, label: '其他' }]))
+  else res.json(wxJson([]))
+})
+app.get('/gm/sleep/today', (req, res) => { res.json(wxJson({ sleepTime: '22:30', wakeTime: '06:30', duration: 8, score: 85 })) })
+app.get('/gm/sleep/tasks/today', (req, res) => { res.json(wxJson([{ id: 1, time: '08:00', title: '呼吸训练', desc: '腹式呼吸10分钟', done: false }, { id: 2, time: '21:00', title: '睡前冥想', desc: '引导式冥想音频', done: false }])) })
+app.get('/gm/sleep/relax-audios', (req, res) => { res.json(wxJson([{ id: 1, title: '深度放松引导', url: '', duration: '10分钟' }, { id: 2, title: '睡前冥想', url: '', duration: '15分钟' }])) })
+app.get('/gm/stats', (req, res) => { res.json(wxJson({ users: 2000, improvement: 90 })) })
+app.get('/gm/hot-topics', (req, res) => { res.json(wxJson([{ id: 1, title: '长期熬夜后如何调整生物钟？', heat: 1000 }, { id: 2, title: '睡前冥想音频分享', heat: 800 }, { id: 3, title: '7天睡眠改善经历', heat: 600 }])) })
+app.get('/gm/feed/categories', (req, res) => { res.json(wxJson([{ id: 'recommend', name: '推荐' }, { id: 'expert', name: '专家专栏' }, { id: 'music', name: '睡眠音乐' }, { id: 'physical', name: '物理治疗' }])) })
+app.get('/gm/feed/categories/expert', (req, res) => { res.json(wxJson([{ id: 'li', name: '李医生' }, { id: 'wang', name: '王教授' }])) })
+app.get('/gm/feed/list', (req, res) => { res.json(wxJson([{ id: 1, title: '如何改善睡眠质量', summary: '睡眠质量直接影响健康...', cover: '/assets/images/cover-1.png', category: 'recommend', author: '张医生', views: 100 }, { id: 2, title: '失眠的常见原因', summary: '失眠原因多种多样...', cover: '/assets/images/cover-2.png', category: 'recommend', author: '李医生', views: 80 }])) })
+app.get('/gm/quick-entry/badge', (req, res) => { res.json(wxJson({ badge: 0 })) })
+app.get('/gm/splash/images', (req, res) => { res.json(wxJson([{ id: 1, url: '/assets/images/splash-1.png' }])) })
+
+
+
+// ========== 社区帖子接口 ==========
+app.get('/gm/community/post', (req, res) => {
+  const { id } = req.query
+  const posts = {
+    1: { id: 1, avatar: '/images/avatar-user.png', nickname: '睡眠小白', timeStr: '2小时前', title: '坚持早睡30天，我的黑眼圈真的消失了！', content: '之前总是凌晨2点才睡，皮肤状态很差，黑眼圈明显。后来按照APP里的睡眠计划调整作息，第1周凌晨2点→凌晨12点，第2周凌晨12点→晚上11点，第3周晚上11点→晚上10点半。坚持一个月后，黑眼圈明显淡了，白天精力充沛！', images: ['/assets/images/banner-1.png', '/assets/images/banner-2.png'], tags: ['睡眠改善', '健康生活'], viewCount: 1234, commentCount: 3, likeCount: 89, liked: false, followed: false },
+    2: { id: 2, avatar: '/images/avatar-user.png', nickname: '求助网友', timeStr: '4小时前', title: '【问答】总是做噩梦是什么原因？', content: '最近一个月每天晚上都做噩梦，醒来感觉很累，有相同经历的朋友吗？压力大的时候尤其严重。', images: [], tags: ['问答求助', '噩梦'], viewCount: 567, commentCount: 2, likeCount: 12, liked: false, followed: false },
+    3: { id: 3, avatar: '/assets/images/expert-avatar-2.png', nickname: '王医生', timeStr: '昨天', title: '【科普】深度睡眠和浅睡眠有什么区别？', content: '深度睡眠也称为慢波睡眠，是睡眠周期中最重要的恢复阶段。成年人每晚需要1.5-2小时深度睡眠。', images: ['/assets/images/banner-3.png'], tags: ['睡眠科普', '深度睡眠'], viewCount: 2341, commentCount: 5, likeCount: 156, liked: false, followed: false },
+  }
+  const post = posts[id] || posts[1]
+  res.json(wxJson(post))
+})
+
+app.get('/gm/community/comments', (req, res) => {
+  const { postId } = req.query
+  const comments = {
+    1: [
+      { id: 1, avatar: '/images/avatar-user.png', nickname: '健康达人', timeStr: '1小时前', content: '真的有效！我也坚持了2周，感觉精神好多了', likeCount: 12, liked: false },
+      { id: 2, avatar: '/assets/images/expert-avatar-1.png', nickname: '李医生', timeStr: '30分钟前', content: '早睡对皮肤的修复确实很重要，建议配合适度的运动效果更佳~', likeCount: 34, liked: true },
+      { id: 3, avatar: '/images/avatar-user.png', nickname: '打工人', timeStr: '10分钟前', content: '道理我都懂，但是加班到10点怎么办😭', likeCount: 5, liked: false },
+    ],
+  }
+  res.json(wxJson(comments[postId] || comments[1] || []))
+})
+
+app.post('/gm/community/comment', (req, res) => {
+  const { postId, content, replyTo } = req.body || {}
+  if (!content) return res.json(wxErr('评论内容不能为空'))
+  res.json(wxJson({ id: Date.now(), content, replyTo, timeStr: '刚刚', liked: false, likeCount: 0 }))
+})
+
+app.post('/gm/community/like', (req, res) => {
+  res.json(wxJson({ ok: true }))
+})
+
 
 const PORT = process.env.PORT || 3101
 app.listen(PORT, () => { console.log('智眠星运营终端服务运行在 http://localhost:'+PORT) })

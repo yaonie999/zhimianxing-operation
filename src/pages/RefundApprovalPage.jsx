@@ -80,22 +80,23 @@ export default function RefundApprovalPage() {
   const loadRows = async () => {
     try {
       setLoading(true)
-      const query = buildQuery({
-        tab,
-        page: currentPage,
-        pageSize,
-        ...appliedFilter
-      })
-      const data = await requestJson(`/api/refunds${query ? `?${query}` : ''}`)
-      const records = (data.data || data).records || data.list || [];
-      const pending = records.filter(r => r.status === 'pending').length;
-      const approved = records.filter(r => r.status === 'approved').length;
-      const rejected = records.filter(r => r.status === 'rejected').length;
-      const refunded = records.filter(r => r.status === 'refunded').length;
-      const totalAll = pending + approved + rejected + refunded;
-      setRows(records);
-      setTotal(totalAll);
+      // 统计永远用不带status的全量数据，显示用带status的过滤数据
+      const countQuery = buildQuery({ page: 1, pageSize: 9999 })
+      const countData = await requestJson(`/api/refunds${countQuery ? `?${countQuery}` : ''}`)
+      const allRecords = (countData.data || countData).records || countData.list || []
+      const pending = allRecords.filter(r => r.status === 'pending').length
+      const approved = allRecords.filter(r => r.status === 'approved').length
+      const rejected = allRecords.filter(r => r.status === 'rejected').length
+      const refunded = allRecords.filter(r => r.status === 'refunded').length
+      const totalAll = pending + approved + rejected + refunded
       setCounts({ all: totalAll, pending, approved, rejected, refunded })
+
+      // 显示用带过滤条件的数据
+      const displayQuery = buildQuery({ page: currentPage, pageSize, ...appliedFilter })
+      const data = await requestJson(`/api/refunds${displayQuery ? `?${displayQuery}` : ''}`)
+      const records = (data.data || data).records || data.list || []
+      setRows(records)
+      setTotal(totalAll)
     } catch {
       setRows([])
       setTotal(0)
@@ -130,6 +131,7 @@ export default function RefundApprovalPage() {
 
   const changeTab = (nextTab) => {
     setTab(nextTab)
+    setAppliedFilter((prev) => ({ ...prev, status: nextTab === 'all' ? '' : nextTab }))
     setCurrentPage(1)
   }
 

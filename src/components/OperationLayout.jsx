@@ -12,6 +12,7 @@ class ContentErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('[OperationLayout] content render error:', error, info)
+    console.error('Error stack:', error?.stack)
   }
 
   render() {
@@ -401,7 +402,7 @@ export default function OperationLayout({ children }) {
                 }}
               >
                 <span>👤</span>
-                <span>momo.zyy</span>
+                <span>{JSON.parse(localStorage.getItem('operation_user') || '{}').name || '运营用户'}</span>
                 <span style={{ color: 'var(--op-sub)' }}>▾</span>
               </button>
               {showUserDropdown && (

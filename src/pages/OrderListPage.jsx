@@ -103,13 +103,14 @@ export default function OrderListPage() {
     let cancelled = false
 
     // 并行请求：全部订单（用于统计）+ 分页订单（用于显示）
+    // 统计用始终请求不带status的全量数据，列表显示用带status的过滤数据
     Promise.all([
       requestJson('/api/orders?page=1&pageSize=9999'),
-      requestJson(`/api/orders?page=${currentPage}&pageSize=${pageSize}`)
+      requestJson(`/api/orders?page=${currentPage}&pageSize=${pageSize}` + (appliedFilter.status ? '&status=' + appliedFilter.status : ''))
     ]).then(([allData, pageData]) => {
       if (cancelled) return
 
-      // 全部订单用于统计
+      // 全部订单用于统计（始终用全量数据，不受status过滤影响）
       const allOrders = (allData.data || allData).records || allData.list || [];
       const pending = allOrders.filter(o => o.status === 'pending').length;
       const paid = allOrders.filter(o => o.status === 'paid').length;
@@ -126,7 +127,7 @@ export default function OrderListPage() {
         cancelled: cancelledCnt,
         refunded,
       });
-      setTotal(totalAll);
+      setTotal(appliedFilter.status ? (pageData.data || pageData).total || (pageData.data || pageData).records?.length || 0 : totalAll);
 
       // 当前页数据用于显示
       const orders2 = (pageData.data || pageData).records || pageData.list || [];
@@ -170,6 +171,8 @@ export default function OrderListPage() {
 
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey)
+    setStatus(tabKey === 'all' ? '' : tabKey)
+    setAppliedFilter((prev) => ({ ...prev, status: tabKey === 'all' ? '' : tabKey }))
     setCurrentPage(1)
   }
 

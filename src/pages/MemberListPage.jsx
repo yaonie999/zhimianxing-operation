@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
-const STUDIO_OPTIONS = ['万象城XXX工作室', '望京工作室', '中关村工作室']
-const THERAPIST_OPTIONS = ['李健康师', '王健康师', '张健康师', '赵健康师']
+// 默认值（API加载前使用）
+const DEFAULT_STUDIOS = ['万象城工作室', '望京工作室', '中关村工作室', '国贸工作室']
+const DEFAULT_THERAPISTS = ['李健康师', '王健康师', '张健康师', '赵健康师']
 const ASSIGN_RELATIONS = [
   { value: 'onsite-random', label: '到诊随机分配' },
   { value: 'online-prebook', label: '线上预约预分配' },
@@ -26,23 +27,14 @@ function randomPick(list, seed = 0) {
   return list[Math.abs(seed) % list.length]
 }
 
-function assignTherapistByRelation({ relation, studio, index, existingTherapist }) {
+function assignTherapistByRelation({ relation, studio, index, existingTherapist, therapistList }) {
   if (existingTherapist) return existingTherapist
-  if (relation === 'online-prebook') return randomPick(THERAPIST_OPTIONS, index + 11)
+  const therapists = (therapistList && therapistList.length) ? therapistList : DEFAULT_THERAPISTS
+  if (relation === 'online-prebook') return randomPick(therapists, index + 11)
   if (relation === 'hospital-link') {
-    const mapped = {
-      万象城XXX工作室: '李健康师',
-      望京工作室: '王健康师',
-      中关村工作室: '张健康师'
-    }
-    return mapped[studio] || '赵健康师'
+    return randomPick(therapists, index)
   }
-  const byStudio = {
-    万象城XXX工作室: ['李健康师', '赵健康师'],
-    望京工作室: ['王健康师', '赵健康师'],
-    中关村工作室: ['张健康师', '赵健康师']
-  }
-  return randomPick(byStudio[studio] || THERAPIST_OPTIONS, index + 3)
+  return randomPick(therapists, index + 3)
 }
 
 function maskPhone(phone = '') {
@@ -112,9 +104,84 @@ export default function MemberListPage() {
   const [deleteModal, setDeleteModal] = useState({ show: false, type: 'single', name: '', id: null, count: 0 })
   const [newMemberDrawer, setNewMemberDrawer] = useState(false)
   const [newMemberForm, setNewMemberForm] = useState({
-    name: '', phone: '', gender: '男', age: '', occupation: '', marital: '未婚', studio: STUDIO_OPTIONS[0], therapist: THERAPIST_OPTIONS[0], group: 'XXX'
+    name: '', phone: '', gender: '男', age: '', occupation: '', marital: '未婚', studio: DEFAULT_STUDIOS[0], therapist: DEFAULT_THERAPISTS[0], group: 'XXX'
   })
+  const [studioList, setStudioList] = useState(DEFAULT_STUDIOS)
+  const [therapistList, setTherapistList] = useState(DEFAULT_THERAPISTS)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // 用户行为分析抽屉
+  const [behaviorDrawer, setBehaviorDrawer] = useState(false)
+  const [behaviorMember, setBehaviorMember] = useState(null)
+  const [bhLoading, setBhLoading] = useState(false)
+  const [bhPoints, setBhPoints] = useState([])
+  const [bhAssessments, setBhAssessments] = useState([])
+  const [bhCheckins, setBhCheckins] = useState([])
+  const [bhPlans, setBhPlans] = useState([])
+  const [bhTab, setBhTab] = useState('overview')
+
+  function openBehaviorDrawer(member) {
+    setBehaviorMember(member)
+    setBehaviorDrawer(true)
+    setBhLoading(true)
+    setBhTab('overview')
+    // 并行加载所有行为数据
+    const token = localStorage.getItem('operation_token') || ''
+    const headers = { 'Authorization': 'Bearer ' + token }
+    Promise.all([
+      fetch(`/api/assessments/members/${member.id}`, { headers }).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/checkin/${member.id}`, { headers }).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/plans/members?keyword=${member.id}`, { headers }).then(r => r.json()).catch(() => ({})),
+    ]).then(([aRes, cRes, pRes]) => {
+      setBhAssessments(aRes.code === 200 && aRes.data ? (Array.isArray(aRes.data) ? aRes.data : []) : [])
+      setBhCheckins(cRes.code === 200 && cRes.data ? (Array.isArray(cRes.data) ? cRes.data : []) : [])
+      setBhPlans(pRes.code === 200 && pRes.data ? (Array.isArray(pRes.data) ? pRes.data : []) : [])
+      // 积分从GM后端
+      return fetch('/gm/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: 'admin123' })
+      })
+    }).then(r => r.json()).then(gmLogin => {
+      const gmToken = gmLogin?.data?.token
+      if (gmToken && member.phoneRaw) {
+        const phone = member.phoneRaw.replace(/\D/g, '').slice(0, 11)
+        return fetch(`/gm/consume/points/records?keyword=${encodeURIComponent(phone)}&pageNum=1&pageSize=50`, {
+          headers: { 'Authorization': gmToken }
+        }).then(r => r.json())
+      }
+      return null
+    }).then(ptsRes => {
+      if (ptsRes && ptsRes.code === 200 && ptsRes.data?.list) {
+        const converted = ptsRes.data.list.map(p => ({
+          ...p,
+          points: p.changeNum ? parseInt(String(p.changeNum).replace(/\D/g, '')) * (String(p.changeNum).startsWith('+') ? 1 : -1) : 0,
+          type: String(p.changeNum || '').startsWith('+') ? 'earn' : 'redeem',
+          reason: p.changeName || '',
+          createTime: p.changeTime || ''
+        }))
+        setBhPoints(converted)
+      }
+    }).finally(() => setBhLoading(false))
+  }
+
+  // 加载工作室和睡眠师列表
+  useEffect(() => {
+    fetch('/api/studios').then(r => r.json()).then(data => {
+      if (data.code === 200 && data.data?.length) {
+        const names = data.data.map(s => s.name)
+        setStudioList(names)
+        setNewMemberForm(prev => ({ ...prev, studio: names[0] }))
+      }
+    }).catch(() => {})
+    fetch('/api/therapists').then(r => r.json()).then(data => {
+      if (data.code === 200 && data.data?.length) {
+        const names = data.data.map(t => t.name)
+        setTherapistList(names)
+        setNewMemberForm(prev => ({ ...prev, therapist: names[0] }))
+      }
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -128,7 +195,7 @@ export default function MemberListPage() {
         if (!res.ok || !Array.isArray(list)) throw new Error('会员数据加载失败')
 
         const normalized = list.map((item, index) => {
-          const studio = item.studio || randomPick(STUDIO_OPTIONS, index)
+          const studio = item.studio || randomPick(studioList.length ? studioList : DEFAULT_STUDIOS, index)
           const relation = ASSIGN_RELATIONS[index % ASSIGN_RELATIONS.length].value
           const therapist = assignTherapistByRelation({
             relation,
@@ -140,7 +207,7 @@ export default function MemberListPage() {
             id: String(item.id || index + 1),
             name: item.name || `患者${index + 1}`,
             phoneRaw: (item.phone || `13800138${String(index + 1).padStart(3, '0')}`).replace(/\D/g, '').slice(0, 11),
-            phone: maskPhone(item.phone || ''),
+            phone: item.phone || '-',
             gender: item.gender || genderOptions[index % genderOptions.length],
             age: Number(item.age) || 20 + (index % 40),
             occupation: item.occupation || '信息',
@@ -167,7 +234,7 @@ export default function MemberListPage() {
   }, [refreshKey])
 
   const therapistsFromData = useMemo(() => {
-    const set = new Set([...THERAPIST_OPTIONS, ...members.map((m) => m.therapist).filter(Boolean)])
+    const set = new Set([...therapistList, ...members.map((m) => m.therapist).filter(Boolean)])
     return [...set]
   }, [members])
 
@@ -242,7 +309,7 @@ export default function MemberListPage() {
 
   function handleCreateProfile() {
     setNewMemberForm({
-      name: '', phone: '', gender: '男', age: '', occupation: '', marital: '未婚', studio: STUDIO_OPTIONS[0], therapist: THERAPIST_OPTIONS[0], group: 'XXX'
+      name: '', phone: '', gender: '男', age: '', occupation: '', marital: '未婚', studio: studioList[0] || DEFAULT_STUDIOS[0], therapist: therapistList[0] || DEFAULT_THERAPISTS[0], group: 'XXX'
     })
     setNewMemberDrawer(true)
   }
@@ -289,7 +356,7 @@ export default function MemberListPage() {
       window.alert('请先勾选需要分配睡眠师的会员。')
       return
     }
-    const therapist = THERAPIST_OPTIONS[0]
+    const therapist = therapistList[0] || DEFAULT_THERAPISTS[0]
     try {
       const res = await fetch('/api/patients/batch-assign', {
         method: 'POST',
@@ -350,7 +417,7 @@ export default function MemberListPage() {
         existingTherapist: key === 'relation' || key === 'studio' ? '' : next.therapist
       })
     }
-    if (key === 'phoneRaw') next.phone = maskPhone(value)
+    if (key === 'phoneRaw') next.phone = value
     setEditForm(next)
   }
 
@@ -376,7 +443,7 @@ export default function MemberListPage() {
   async function saveEdit() {
     const err = validateEditForm()
     if (err) { window.alert(err); return }
-    const payload = { ...editForm, age: Number(editForm.age), phone: maskPhone(editForm.phoneRaw) }
+    const payload = { ...editForm, age: Number(editForm.age), phone: editForm.phoneRaw }
     try {
       const res = await fetch(`/api/patients/${editForm.id}`, {
         method: 'PUT',
@@ -488,7 +555,7 @@ export default function MemberListPage() {
                     <button onClick={() => (window.location.hash = `/members/${item.id}`)}>详情</button>
                     <button onClick={() => openEditDrawer(item)}>编辑</button>
                     <button className="danger" onClick={(e) => { e.stopPropagation(); setDeleteModal({ show: true, type: 'single', name: item.name, id: item.id, count: 1 }) }}>删除</button>
-                    <button onClick={() => window.alert(`查看 ${item.name} 的用户行为分析（待接入）`)}>用户行为分析</button>
+                    <button onClick={() => openBehaviorDrawer(item)}>用户行为分析</button>
                   </td>
                 </tr>
               ))}
@@ -570,7 +637,7 @@ export default function MemberListPage() {
               <div className="member-v2-form-row">
                 <label>* 所属工作室</label>
                 <select value={editForm.studio} onChange={(e) => handleEditChange('studio', e.target.value)}>
-                  {STUDIO_OPTIONS.map((studio) => (<option key={studio} value={studio}>{studio}</option>))}
+                  {studioList.map((studio) => (<option key={studio} value={studio}>{studio}</option>))}
                 </select>
               </div>
               <div className="member-v2-form-row">
@@ -651,19 +718,223 @@ export default function MemberListPage() {
               <div className="member-v2-form-row">
                 <label>* 所属睡眠师</label>
                 <select value={newMemberForm.therapist} onChange={(e) => handleNewChange('therapist', e.target.value)}>
-                  {THERAPIST_OPTIONS.map((t) => (<option key={t} value={t}>{t}</option>))}
+                  {therapistList.map((t) => (<option key={t} value={t}>{t}</option>))}
                 </select>
               </div>
               <div className="member-v2-form-row">
                 <label>* 所属工作室</label>
                 <select value={newMemberForm.studio} onChange={(e) => handleNewChange('studio', e.target.value)}>
-                  {STUDIO_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
+                  {studioList.map((s) => (<option key={s} value={s}>{s}</option>))}
                 </select>
               </div>
             </div>
             <div className="member-v2-drawer-footer">
               <button className="member-v2-btn" onClick={closeNewDrawer}>取消</button>
               <button className="member-v2-btn primary" onClick={saveNewMember}>确定</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 用户行为分析抽屉 */}
+      {behaviorDrawer && behaviorMember && (
+        <div className="member-v2-drawer-mask" onClick={() => setBehaviorDrawer(false)}>
+          <div className="member-v2-drawer" style={{ width: 620, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div className="member-v2-drawer-header">
+              <h3>用户行为分析 — {behaviorMember.name}</h3>
+              <button onClick={() => setBehaviorDrawer(false)}>✕</button>
+            </div>
+            <div className="member-v2-drawer-body" style={{ padding: '0' }}>
+              {/* 会员信息头部 */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f1f2', background: '#fafafa' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #1650ff, #4c7cff)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 600, flexShrink: 0 }}>
+                    {(behaviorMember.name || '未知').slice(0, 1)}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: '#1f2329' }}>{behaviorMember.name}</div>
+                    <div style={{ fontSize: 12, color: '#86909c', marginTop: 2 }}>
+                      {behaviorMember.phoneRaw || '-'} &nbsp;|&nbsp; {behaviorMember.studio || '-'} &nbsp;|&nbsp; {behaviorMember.therapist || '-'}
+                    </div>
+                  </div>
+                </div>
+                {/* 统计行 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                  {[
+                    { label: '可用积分', value: behaviorMember.points || 0, color: '#1650ff', bg: '#e8effe' },
+                    { label: '累计消费', value: behaviorMember.totalConsume || 0, color: '#ff7d00', bg: '#fff7e6' },
+                    { label: '评估记录', value: bhAssessments.length, color: '#00b42a', bg: '#f0fff0' },
+                    { label: '打卡记录', value: bhCheckins.length, color: '#f53f3f', bg: '#fff1f0' },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: s.bg, borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 11, color: '#86909c', marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 标签 */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #f0f1f2', background: '#fff' }}>
+                {[
+                  { key: 'overview', label: '总览' },
+                  { key: 'points', label: `积分明细${bhPoints.length ? ` (${bhPoints.length})` : ''}` },
+                  { key: 'assessments', label: `评估记录${bhAssessments.length ? ` (${bhAssessments.length})` : ''}` },
+                  { key: 'checkins', label: `打卡记录${bhCheckins.length ? ` (${bhCheckins.length})` : ''}` },
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setBhTab(tab.key)}
+                    style={{
+                      flex: 1, padding: '12px 4px', background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 13, fontWeight: bhTab === tab.key ? 600 : 400,
+                      color: bhTab === tab.key ? '#1650ff' : '#646a73',
+                      borderBottom: bhTab === tab.key ? '2px solid #1650ff' : '2px solid transparent',
+                      marginBottom: -1,
+                    }}
+                  >{tab.label}</button>
+                ))}
+              </div>
+
+              {/* 内容区 */}
+              <div style={{ padding: '16px 20px', maxHeight: 400, overflowY: 'auto' }}>
+                {bhLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#86909c' }}>加载中...</div>
+                ) : bhTab === 'overview' ? (
+                  <div>
+                    {bhPoints.length === 0 && bhAssessments.length === 0 && bhCheckins.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '30px 0', color: '#86909c' }}>
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                        <div style={{ fontSize: 14 }}>暂无行为数据</div>
+                        <div style={{ fontSize: 12, marginTop: 4, color: '#c9cdd4' }}>会员在小程序端产生操作后，记录将显示在此</div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        {bhPoints.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1f2329', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f2f3f5' }}>积分变动</div>
+                            {bhPoints.slice(0, 5).map((p, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f7f8fa', fontSize: 12 }}>
+                                <span style={{ color: '#646a73' }}>{p.createTime?.slice(0, 10) || '-'}</span>
+                                <span style={{ color: p.type === 'earn' ? '#00b42a' : '#f53f3f', fontWeight: 600 }}>
+                                  {p.type === 'earn' ? '+' : '-'}{Math.abs(p.points)}
+                                </span>
+                              </div>
+                            ))}
+                            {bhPoints.length > 5 && <div style={{ fontSize: 12, color: '#86909c', padding: '4px 0' }}>还有 {bhPoints.length - 5} 条...</div>}
+                          </div>
+                        )}
+                        {bhAssessments.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1f2329', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f2f3f5' }}>评估记录</div>
+                            {bhAssessments.slice(0, 3).map((a, i) => (
+                              <div key={i} style={{ padding: '7px 0', borderBottom: '1px solid #f7f8fa', fontSize: 12 }}>
+                                <div style={{ color: '#1f2329' }}>{a.template_name || a.templateName || '-'}</div>
+                                <div style={{ color: '#86909c', marginTop: 2 }}>
+                                  {a.assessment_date ? String(a.assessment_date).slice(0, 10) : '-'} &nbsp;
+                                  {a.total_score != null ? `评分: ${a.total_score}` : ''}
+                                </div>
+                              </div>
+                            ))}
+                            {bhAssessments.length > 3 && <div style={{ fontSize: 12, color: '#86909c', padding: '4px 0' }}>还有 {bhAssessments.length - 3} 条...</div>}
+                          </div>
+                        )}
+                        {bhCheckins.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1f2329', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f2f3f5' }}>打卡记录</div>
+                            {bhCheckins.slice(0, 5).map((c, i) => (
+                              <div key={i} style={{ padding: '7px 0', borderBottom: '1px solid #f7f8fa', fontSize: 12 }}>
+                                <div style={{ color: '#1f2329' }}>{c.type || '打卡'}</div>
+                                <div style={{ color: '#86909c', marginTop: 2 }}>
+                                  {c.checkin_date ? String(c.checkin_date).slice(0, 10) : '-'}
+                                </div>
+                              </div>
+                            ))}
+                            {bhCheckins.length > 5 && <div style={{ fontSize: 12, color: '#86909c', padding: '4px 0' }}>还有 {bhCheckins.length - 5} 条...</div>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : bhTab === 'points' ? (
+                  bhPoints.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 0', color: '#86909c' }}>暂无积分变动记录</div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: '#f7f8fa' }}>
+                          {['时间', '类型', '积分', '说明'].map(h => (
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: '#646a73', fontWeight: 500 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bhPoints.map((p, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #f2f3f5' }}>
+                            <td style={{ padding: '8px 10px', color: '#86909c' }}>{p.createTime ? String(p.createTime).slice(0, 19) : '-'}</td>
+                            <td style={{ padding: '8px 10px' }}><span style={{ padding: '1px 6px', borderRadius: 4, fontSize: 11, background: p.type === 'earn' ? '#e8ffe8' : '#fff1f0', color: p.type === 'earn' ? '#00b42a' : '#f53f3f' }}>{p.type === 'earn' ? '获取' : '兑换'}</span></td>
+                            <td style={{ padding: '8px 10px', color: p.type === 'earn' ? '#00b42a' : '#f53f3f', fontWeight: 600 }}>{p.type === 'earn' ? '+' : '-'}{Math.abs(p.points)}</td>
+                            <td style={{ padding: '8px 10px', color: '#646a73' }}>{p.reason || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
+                ) : bhTab === 'assessments' ? (
+                  bhAssessments.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 0', color: '#86909c' }}>暂无评估记录</div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: '#f7f8fa' }}>
+                          {['日期', '模板', '总分', '风险'].map(h => (
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: '#646a73', fontWeight: 500 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bhAssessments.map((a, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #f2f3f5' }}>
+                            <td style={{ padding: '8px 10px', color: '#86909c' }}>{a.assessment_date ? String(a.assessment_date).slice(0, 10) : '-'}</td>
+                            <td style={{ padding: '8px 10px', color: '#1f2329' }}>{a.template_name || '-'}</td>
+                            <td style={{ padding: '8px 10px', color: '#1650ff', fontWeight: 600 }}>{a.total_score ?? '-'}</td>
+                            <td style={{ padding: '8px 10px' }}>
+                              {a.risk_level ? (
+                                <span style={{ padding: '1px 6px', borderRadius: 4, fontSize: 11, background: a.risk_level >= 3 ? '#fff1f0' : '#e8ffe8', color: a.risk_level >= 3 ? '#f53f3f' : '#00b42a' }}>
+                                  {a.risk_level >= 3 ? '高风险' : '低风险'}
+                                </span>
+                              ) : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
+                ) : (
+                  bhCheckins.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 0', color: '#86909c' }}>暂无打卡记录</div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: '#f7f8fa' }}>
+                          {['日期', '类型', '内容'].map(h => (
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: '#646a73', fontWeight: 500 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bhCheckins.map((c, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #f2f3f5' }}>
+                            <td style={{ padding: '8px 10px', color: '#86909c' }}>{c.checkin_date ? String(c.checkin_date).slice(0, 10) : '-'}</td>
+                            <td style={{ padding: '8px 10px', color: '#1650ff' }}>{c.type || '打卡'}</td>
+                            <td style={{ padding: '8px 10px', color: '#86909c', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.content || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
+                )}
+              </div>
             </div>
           </div>
         </div>

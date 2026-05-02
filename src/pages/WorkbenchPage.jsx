@@ -154,13 +154,14 @@ export default function WorkbenchPage({ embedded = false }) {
 
   useEffect(() => {
     const key = 'workbench_verify_prompt_shown'
-    if (!sessionStorage.getItem(key)) {
-      const timer = setTimeout(() => {
-        setShowVerifyEndModal(true)
-        sessionStorage.setItem(key, '1')
-      }, 1200)
-      return () => clearTimeout(timer)
-    }
+    // 取消进页面自动弹出核销确认提示（调试用，上线时关闭）
+    // if (!sessionStorage.getItem(key)) {
+    //   const timer = setTimeout(() => {
+    //     setShowVerifyEndModal(true)
+    //     sessionStorage.setItem(key, '1')
+    //   }, 1200)
+    //   return () => clearTimeout(timer)
+    // }
   }, [])
 
   useEffect(() => {

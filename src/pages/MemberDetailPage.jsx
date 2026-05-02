@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 
-const AVATAR_MALE = 'https://api.dicebear.com/7.x/avataaars/svg?seed=male1&backgroundColor=b6e3f4'
-const AVATAR_FEMALE = 'https://api.dicebear.com/7.x/avataaars/svg?seed=female1&backgroundColor=ffd5dc'
+const AVATAR_MALE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgZmlsbD0iIzNlODJmZiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1zaXplPSIzMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBhbGlnbj0ibWlkZGxlIiBmaWxsPSIjZmZmIj57e2ltZy5nZW5kZXIgPT09ICdBJyA/ICdBJyA6ICdCJ319PC90ZXh0Pjwvc3ZnPg==';
+const AVATAR_FEMALE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgZmlsbD0iI2ZmZGRkYiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1zaXplPSIzMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBhbGlnbj0ibWlkZGxlIiBmaWxsPSIjZmZmIj57e2ltZy5nZW5kZXIgPT09ICdBJyA/ICdBJyA6ICdCJ319PC90ZXh0Pjwvc3ZnPg==';
+const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgZmlsbD0iIzY0NzQ4YiIvPjwvc3ZnPg==';
 
 const LEFT_MENU_SECTIONS = [
   {
@@ -84,6 +85,83 @@ export default function MemberDetailPage() {
   const [selectedScaleIds, setSelectedScaleIds] = useState([])
   const [leftSearch, setLeftSearch] = useState('')
   const [rightSearch, setRightSearch] = useState('')
+  // 印印/导出功能
+  function handlePrint() {
+    // 打\u5370\u53ea\u6253\u53f3\u4fa3\u8be6\u60c5\u5185\u5bb9\u533a，不\u6253\u5168\u9875
+    const el = document.getElementById('member-detail-content')
+    if (!el) { window.print(); return }
+    // 暂\u65f6\u9690\u85cf\u5176\u4ed6\u5168\u5c40\u5143\u7d20\uff0c\u6253\u5370\u5185\u5bb9\u533a\u540e\u6062\u590d
+    const original = {}
+    const targets = ['BODY', 'APP']
+    targets.forEach(function(tag) {
+      var all = document.getElementsByTagName(tag)
+      if (all[0]) {
+        original[tag] = all[0].style.cssText
+        all[0].style.cssText = ''
+      }
+    })
+    // \u8fd8\u539f\u6253\u5370\u5f02\u5e38\u65f6\u6062\u590d
+    var restored = false
+    function restore() {
+      if (restored) return
+      restored = true
+      targets.forEach(function(tag) {
+        var all = document.getElementsByTagName(tag)
+        if (all[0] && original[tag] !== undefined) all[0].style.cssText = original[tag]
+      })
+    }
+    window.addEventListener('afterprint', restore, { once: true })
+    setTimeout(restore, 1000)
+    window.print()
+  }
+
+  function handleExport() {
+    const m = member || {}
+    const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+    function r(v, n) { return String(v ?? '-').padEnd(n) }
+    const lines = []
+    lines.push('┌──────────────────────────────────────────────────┬')
+    lines.push('│ 姓名：' + r(m.name) + '  │ 性别：' + r(m.gender||'-') + '  │ 年龄：' + r(m.age||'-') + '  │ 电话：' + r(m.phone||'-') + '  │')
+    lines.push('│ 职业：' + r(m.occupation||'-') + '  │ 婚姻：' + r(m.marital||'-') + '  │ 所属工作室：' + r(m.studio||'-') + '  │ 睡眠师：' + r(m.therapist||'-') + '  │')
+    lines.push('│ 分组：' + r(m.group_name||'-') + '  │ 注册时间：' + r(m.create_time ? String(m.create_time).slice(0,19).replace('T',' ') : '-') + '  │')
+    lines.push('└──────────────────────────────────────────────────┘')
+    lines.push('')
+    lines.push('《评估记录》')
+    if (assessments && assessments.length > 0) {
+      lines.push('  编号  | 评估模板                  | 分数 | 风险   | 评估师    | 日期  ')
+      lines.push('  ' + '-―'*67)
+      assessments.forEach(function(a,i){ lines.push('  ' + String(i+1).padEnd(4) + ' | ' + r(a.template_name||'-',22) + ' | ' + r(a.total_score!=null?String(a.total_score):'-',4) + ' | ' + r(a.risk_level?(a.risk_level>=3?'高风险':'低风险'):'-',6) + ' | ' + r(a.therapist||'-',8) + ' | ' + r(a.assessment_date?String(a.assessment_date).slice(0,10):'-',8)) })
+    } else { lines.push('  暂无评估记录') }
+    lines.push('')
+    lines.push('《方案执行记录》')
+    if (plans && plans.length > 0) {
+      lines.push('  方案名称        | 类  | 开始日   | 结束日   | 天数 | 状态')
+      lines.push('  ' + '-―'*67)
+      plans.forEach(function(p){ lines.push('  ' + r(p.plan_name||'-',14) + ' | ' + r(p.plan_type||'-',3) + ' | ' + r(p.start_date?String(p.start_date).slice(0,10):'-',8) + ' | ' + r(p.end_date?String(p.end_date).slice(0,10):'-',8) + ' | ' + r(p.duration_days?p.duration_days+'天':'-',4) + ' | ' + r(p.status||'-',6)) })
+    } else { lines.push('  暂无方案记录') }
+    lines.push('')
+    lines.push('《睡眠日记（最多30条）》')
+    const drows = diary && Array.isArray(diary) ? diary : []
+    if (drows.length > 0) {
+      lines.push('  日期      | 居庌时 | 起庌时 | 睡眠h | 效率  | 主觉分 | 备注')
+      lines.push('  ' + '-―'*67)
+      drows.slice(0,30).forEach(function(d){ lines.push('  ' + r(d.diary_date?String(d.diary_date).slice(0,10):'-',8) + ' | ' + r(d.bed_time||'-',6) + ' | ' + r(d.wake_time||'-',6) + ' | ' + r(d.sleep_hours!=null?String(d.sleep_hours)+'h':'-',5) + ' | ' + r(d.sleep_efficiency||'-',6) + ' | ' + r(d.self_score||'-',6) + ' | ' + r((d.notes||'-').replace(/\n/g,' '),8)) })
+    } else { lines.push('  暂无睡眠日记') }
+    lines.push('')
+    lines.push('─'*74)
+    lines.push('  智眠星健康管理系统  内部文件仅供内部使用  导出时间：' + now)
+    const txt = lines.join('\n')
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '\u60a3\u8005\u6863\u6848_' + (m.name||'\u672a\u77e5') + '_' + new Date().toISOString().slice(0,10) + '.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
 
   useEffect(function() {
     let mounted = true
@@ -96,6 +174,7 @@ export default function MemberDetailPage() {
         if (!res.ok || !data || !data.data) throw new Error(data?.message || '加载失败')
         if (mounted) setMember(data.data)
       } catch (e) {
+        console.error('[MemberDetailPage] fetch error:', e)
         if (mounted) setError(e.message || '加载失败')
       } finally {
         if (mounted) setLoading(false)
@@ -230,7 +309,7 @@ export default function MemberDetailPage() {
   }
 
   return (
-    <div style={{display:'flex',height:'100%',overflow:'hidden',background:'#f5f5f5'}}>
+    <div style={{display:'flex',flex:1,minHeight:0,overflow:'auto',background:'#f5f5f5'}}>
       {/* 左侧会员信息卡 */}
       <div style={{width:260,flexShrink:0,background:'#fff',borderRight:'1px solid #e5e7eb',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         {/* 顶部页签 */}
@@ -255,7 +334,7 @@ export default function MemberDetailPage() {
           </div>
           <div style={{fontSize:11,color:'#64748b',lineHeight:'20px'}}>
             <div>卡号：{formatMemberId(member.id)}</div>
-            <div>电话：{maskPhone(member.phone)}</div>
+            <div>电话：{member.phone || '-'}</div>
             <div>职业：{member.profession || '-'}</div>
             <div>分组：{member.group_name || member.group || '-'}</div>
             <div>建档：{fmtTime(member.create_time).substring(0,10)}</div>
@@ -286,7 +365,7 @@ export default function MemberDetailPage() {
       {/* 右侧主内容区 */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         {/* 内容区 */}
-        <div style={{flex:1,overflowY:'auto',padding:'0 16px 16px'}}>
+        <div style={{flex:1,overflowY:'auto',id:'member-detail-content',padding:'0 16px 16px'}}>
           {!leftTab ? (
             <div style={{background:'#fff',padding:24,borderRadius:8,border:'1px solid #e5e7eb',textAlign:'center',color:'#94a3b8',fontSize:14}}>
               请选择左侧菜单查看详情
@@ -295,8 +374,8 @@ export default function MemberDetailPage() {
             <div style={{background:'#fff',margin:16,padding:24,borderRadius:8,border:'1px solid #e5e7eb'}}>
               {/* 操作按钮 */}
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:20}}>
-                <button style={{padding:'6px 16px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:13}}>导出</button>
-                <button style={{padding:'6px 16px',background:'#fff',color:'#475569',border:'1px solid #e5e7eb',borderRadius:4,cursor:'pointer',fontSize:13}}>打印</button>
+                <button onClick={handleExport} style={{padding:'6px 16px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:4,cursor:'pointer',fontSize:13}}>导出</button>
+                <button onClick={handlePrint} style={{padding:'6px 16px',background:'#fff',color:'#475569',border:'1px solid #e5e7eb',borderRadius:4,cursor:'pointer',fontSize:13}}>打印</button>
               </div>
               {/* 文档标题 */}
               <div style={{fontSize:18,fontWeight:600,color:'#1e293b',textAlign:'center',marginBottom:20}}>短程行为治疗入组知情同意书</div>
@@ -347,8 +426,8 @@ export default function MemberDetailPage() {
           ) : leftTab === 'interview' ? (
             <div style={{background:'#fff',margin:16,padding:20,borderRadius:8,border:'1px solid #e5e7eb'}}>
               <div style={{display:'flex',justifyContent:'flex-end',marginBottom:16,gap:8}}>
-                <button style={{padding:'6px 16px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:13}}>导出</button>
-                <button style={{padding:'6px 16px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:13}}>打印</button>
+                <button onClick={handleExport} style={{padding:'6px 16px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:13}}>导出</button>
+                <button onClick={handlePrint} style={{padding:'6px 16px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:13}}>打印</button>
               </div>
               <div style={{fontSize:16,fontWeight:600,color:'#1e293b',textAlign:'center',marginBottom:24}}>睡眠访谈</div>
               {/* 基本资料 */}
@@ -480,8 +559,8 @@ export default function MemberDetailPage() {
                   <button style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',marginRight:8,cursor:'pointer'}}>设置天数 (1)</button>
                   <button style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',marginRight:8,cursor:'pointer'}}>提醒</button>
                   <button style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',marginRight:8,cursor:'pointer'}}>已反馈</button>
-                  <button style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',marginRight:8,cursor:'pointer'}}>导出</button>
-                  <button style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer'}}>打印</button>
+                  <button onClick={handleExport} style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',marginRight:8,cursor:'pointer'}}>导出</button>
+                  <button onClick={handlePrint} style={{padding:'4px 12px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer'}}>打印</button>
                 </div>
               </div>
               <div style={{marginBottom:16}}>
@@ -727,8 +806,8 @@ export default function MemberDetailPage() {
                   <div style={{fontSize:14,fontWeight:600,color:'#1e293b'}}>第2周计划</div>
                   <div style={{display:'flex',gap:8}}>
                     <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>修改计划</button>
-                    <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>导出</button>
-                    <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>打印</button>
+                    <button onClick={handleExport} style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>导出</button>
+                    <button onClick={handlePrint} style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>打印</button>
                     <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>收起</button>
                   </div>
                 </div>
@@ -768,8 +847,8 @@ export default function MemberDetailPage() {
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #e5e7eb',background:'#f9fafb'}}>
                   <div style={{fontSize:14,fontWeight:600,color:'#94a3b8'}}>第1周计划</div>
                   <div style={{display:'flex',gap:8}}>
-                    <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>导出</button>
-                    <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>打印</button>
+                    <button onClick={handleExport} style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>导出</button>
+                    <button onClick={handlePrint} style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>打印</button>
                     <button style={{padding:'4px 10px',border:'1px solid #e5e7eb',borderRadius:4,background:'#fff',cursor:'pointer',fontSize:11}}>展开</button>
                   </div>
                 </div>
