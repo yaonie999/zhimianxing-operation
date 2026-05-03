@@ -40,7 +40,8 @@ const dbPool = mysql.createPool({
   database: process.env.MYSQL_DB||'zhimianxing',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  ssl: process.env.MYSQL_SSL==='true' ? {rejectUnauthorized: false} : undefined
 })
 
 function safeParse(str) {
